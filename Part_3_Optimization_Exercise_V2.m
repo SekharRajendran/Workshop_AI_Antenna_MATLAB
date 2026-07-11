@@ -22,7 +22,7 @@ pcbAntennaDesigner
 %[text] 
 %[text] - **Center Frequency**: `4.5` GHz
 %[text] - **Frequency Range**: 4.38:0.04:4.62 GHz \
-centerFrequencyGHz = 4.65
+centerFrequencyGHz = 4.5
 frequencyRangeGHz = 4.38:0.04:4.62
 %[text] ![](text:image:5420)
 %%
