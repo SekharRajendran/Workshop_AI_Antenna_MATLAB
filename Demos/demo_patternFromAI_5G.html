@@ -1,0 +1,526 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge,IE=9,chrome=1"><meta name="generator" content="MATLAB 2026b"><title>Reconstruct 3-D Radiation Pattern of 5G Phased Array from Sparse Measurements Using AI</title><style type="text/css">.rtcContent { padding: 30px; } .S0 { margin: 10px 10px 5px 26px; padding: 0px; line-height: 28.8px; min-height: 0px; white-space: pre; color: rgb(192, 76, 11); font-family: Helvetica, Arial, sans-serif, Helvetica, Arial, sans-serif; font-style: normal; font-size: 24px; font-weight: 400; text-align: left;  }
+._richTextNode {white-space: break-spaces;}
+.S1 { margin: 2px 10px 9px 26px; padding: 0px; line-height: 21px; min-height: 0px; white-space: pre; color: rgb(33, 33, 33); font-family: Helvetica, Arial, sans-serif, Helvetica, Arial, sans-serif; font-style: normal; font-size: 14px; font-weight: 400; text-align: left;  }
+.S2 { margin: 10px 0px 20px; padding-left: 0px; font-family: Helvetica, Arial, sans-serif, Helvetica, Arial, sans-serif; font-size: 14px;  }
+.S3 { margin-left: 56px; line-height: 21px; min-height: 0px; text-align: left; white-space: pre-wrap;  }
+.S4 { margin: 10px 10px 5px 26px; padding: 0px; line-height: 25px; min-height: 0px; white-space: pre; color: rgb(33, 33, 33); font-family: Helvetica, Arial, sans-serif, Helvetica, Arial, sans-serif; font-style: normal; font-size: 20px; font-weight: 700; text-align: left;  }
+.CodeBlock { background-color: #F5F5F5; margin: 10px 0 10px 0; }
+.S5 { border-left: 0px none rgb(33, 33, 33); border-right: 0px none rgb(33, 33, 33); border-top: 0px none rgb(33, 33, 33); border-bottom: 0px none rgb(33, 33, 33); border-radius: 0px; padding: 0px 45px 0px 21px; line-height: 18.004px; min-height: 0px; white-space: nowrap; color: rgb(33, 33, 33); font-family: Menlo, Monaco, Consolas, "Courier New", monospace, Menlo, Monaco, Consolas, "Courier New", monospace; font-size: 14px; text-indent: 0px;  }
+.S6 { margin: 10px 10px 5px 26px; padding: 0px; line-height: 20.4px; min-height: 0px; white-space: pre; color: rgb(33, 33, 33); font-family: Helvetica, Arial, sans-serif, Helvetica, Arial, sans-serif; font-style: normal; font-size: 17px; font-weight: 700; text-align: left;  }</style></head><body><div class = rtcContent><h1  class = 'S0'><span class="_richTextNode">Reconstruct 3-D Radiation Pattern of 5G Phased Array from Sparse Measurements Using AI</span></h1><div  class = 'S1'><span class="_richTextNode">This example demonstrates how to reconstruct the full 3-D radiation pattern of a 5G mmWave phased array antenna from a small number of measurement cuts. The reconstruction employs the artificial intelligence (AI) based </span><span class="_richTextNode" style=' font-family: monospace;'>patternFromAI</span><span class="_richTextNode"> function from Antenna Toolbox™ to infer full 3-D patterns from sparse observations. The workflow simulates a practical over-the-air (OTA) testing scenario with the following constraints and considerations:</span></div><ul  class = 'S2'><li  class = 'S3'><span class="_richTextNode">Only a few 2-D pattern slices are available from chamber measurements</span></li><li  class = 'S3'><span class="_richTextNode">The full 3-D pattern must be inferred from this sparse data</span></li><li  class = 'S3'><span class="_richTextNode">Pattern multiplication enables array-level characterization from element-level measurements</span></li></ul><div  class = 'S1'><span class="_richTextNode">The example uses synthetic data generated from full-wave simulation of a 28 GHz patch antenna array to provide a ground-truth reference for evaluating reconstruction accuracy. In practice, the sparse slice data would come from physical measurements in an anechoic chamber.</span></div><h2  class = 'S4'><span class="_richTextNode">Background</span></h2><div  class = 'S1'><span class="_richTextNode">OTA characterization of 5G mmWave phased arrays in anechoic chambers is time-consuming and expensive. A full 3-D pattern measurement at 1-degree resolution requires over 65,000 sample points. By contrast, capturing two elevation cuts and one azimuthal cut at 2-degree resolution yields approximately 540 samples — a 120x reduction in measurement time.</span></div><div  class = 'S1'><span class="_richTextNode">The </span><span class="_richTextNode" style=' font-family: monospace;'>patternFromAI</span><span class="_richTextNode"> function uses a pretrained deep learning model to reconstruct a plausible 3-D pattern from such sparse observations. The model has been trained on a diverse corpus of antenna and array patterns from the Antenna Toolbox catalog and has learned the general structure of physical radiation patterns on the sphere.</span></div><div  class = 'S1'><span class="_richTextNode">This example evaluates reconstruction accuracy for the following scenarios:</span></div><ol  class = 'S2'><li  class = 'S3'><span class="_richTextNode">A single patch element (simpler pattern structure)</span></li><li  class = 'S3'><span class="_richTextNode">A uniform array (narrower beams, sidelobe structure)</span></li><li  class = 'S3'><span class="_richTextNode">An array pattern estimated via pattern multiplication from the reconstructed element</span></li><li  class = 'S3'><span class="_richTextNode">A beamsteered array (asymmetric main beam, off-broadside peak)</span></li></ol><h2  class = 'S4'><span class="_richTextNode">Overview of Measurement Data</span></h2><div  class = 'S1'><span class="_richTextNode">The example uses three data sets generated from full-wave simulation of a 28 GHz patch element, a 4x4 rectangular array with uniform excitation, and a beamsteered variant of the same array. Each data set contains the full 3-D directivity pattern on a 1-degree grid (360 azimuth by 181 elevation points) and sparse measurement slices sampled at 2-degree resolution. The baseline configuration consists of two elevation cuts at azimuth 0 degrees and 90 degrees, respectively, and one azimuthal cut at elevation 0 degrees (i.e. the horizon). The steered case includes an additional targeted elevation cut through the steering direction. Note that each elevation cut traces a full 360-degree path through both poles by extending the elevation angle beyond the conventional </span><span style="font-family: STIXGeneral-webfont, serif; font-style: normal; font-weight: 400; color: rgb(33, 33, 33);">±</span><span class="_richTextNode">90-degree range. These sparse slices represent the limited data acquired in a practical OTA chamber measurement, where full 3-D pattern sweeps can be prohibitively time-consuming. Refer to the companion script </span><span class="_richTextNode" style=' font-family: monospace;'>generate28GHzPatchArrayPatternData.m</span><span class="_richTextNode"> for details.</span></div><h2  class = 'S4'><span class="_richTextNode">Load and Visualize Element Measurement Data</span></h2><div  class = 'S1'><span class="_richTextNode">Load the measurement data for a 28 GHz microstrip patch element.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >elemData = load(</span><span style="color: rgb(167, 9, 245);">"patchElement_28GHz_patternData.mat"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(elemData.description)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Visualize the element measurement slices.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >polarpattern(elemData.elcut1.el,elemData.elcut1.data,TitleTop=</span><span style="color: rgb(167, 9, 245);">"Element — Elevation Cut (az = 0 deg)"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >polarpattern(elemData.elcut2.el,elemData.elcut2.data,TitleTop=</span><span style="color: rgb(167, 9, 245);">"Element — Elevation Cut (az = 90 deg)"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >polarpattern(elemData.azcut.az,elemData.azcut.data,TitleTop=</span><span style="color: rgb(167, 9, 245);">"Element — Azimuthal Cut (el = 0 deg)"</span><span >)</span></span></div></div></div><h2  class = 'S4'><span class="_richTextNode">Reconstruct Element 3-D Pattern from Sparse Measurements</span></h2><div  class = 'S1'><span class="_richTextNode">Assemble the sparse measurement samples into the vectors required by </span><span class="_richTextNode" style=' font-family: monospace;'>patternFromAI</span><span class="_richTextNode">: directivity values in dBi, azimuth angles, and elevation angles. Each sample is a triplet (magnitude, azimuth, elevation). The extended elevation convention (beyond </span><span style="font-family: STIXGeneral-webfont, serif; font-style: normal; font-weight: 400; color: rgb(33, 33, 33);">±</span><span class="_richTextNode">90 degrees) is accepted directly.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >elemSparseData = [elemData.elcut1.data,elemData.elcut2.data,elemData.azcut.data];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >elemSparseAz = [elemData.elcut1.az*ones(size(elemData.elcut1.el)), </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    elemData.elcut2.az*ones(size(elemData.elcut2.el)),elemData.azcut.az];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >elemSparseEl = [elemData.elcut1.el,elemData.elcut2.el,zeros(size(elemData.azcut.az))];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >nSparse = numel(elemSparseData);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >nFull = 360*181;</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Sparse samples: " </span><span >+ nSparse + </span><span style="color: rgb(167, 9, 245);">" (from " </span><span >+ nFull + </span><span style="color: rgb(167, 9, 245);">"-point grid)"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Compression: " </span><span >+ round(nFull/nSparse) + </span><span style="color: rgb(167, 9, 245);">"x"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Reconstruct the full 3-D pattern from the sparse samples.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >[elemRecon,elOut,azOut] = patternFromAI(elemSparseData, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    elemSparseAz,elemSparseEl,AngleConvention=</span><span style="color: rgb(167, 9, 245);">"az-el"</span><span >);</span></span></div></div></div><h2  class = 'S4'><span class="_richTextNode">Visualize Reconstructed and Reference Element Patterns</span></h2><div  class = 'S1'><span class="_richTextNode">Import the reconstructed pattern into a </span><span class="_richTextNode" style=' font-family: monospace;'>measuredAntenna</span><span class="_richTextNode"> object using the </span><span class="_richTextNode" style=' font-family: monospace;'>helperMeasuredAntennaFromDirectivity</span><span class="_richTextNode"> local function. This readily facilitates both 3-D visualization here and pattern multiplication later.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >azVec = double(azOut);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >elVec = double(elOut);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >[azGrid,elGrid] = meshgrid(azVec,elVec);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >azGrid = azGrid.';</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >elGrid = elGrid.';</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >dirMat = [azGrid(:),elGrid(:),ones(numel(azGrid),1)];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >mElemRecon = helperMeasuredAntennaFromDirectivity(elemRecon(:),dirMat,elemData.freq,azVec,elVec);</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Visualize the reconstructed pattern. Set the magnitude scale to a 40 dB dynamic range below the reference peak to subsequently enable direct visual comparison with the reference pattern.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >elemPeakRef = max(elemData.p3D(:));</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >pOptsElem = PatternPlotOptions(MagnitudeScale=[elemPeakRef-40,elemPeakRef]);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >pattern(mElemRecon,elemData.freq,azVec,elVec,PatternOptions=pOptsElem)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >title(</span><span style="color: rgb(167, 9, 245);">"Element Pattern — AI Reconstruction"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Compare against the reference pattern.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >mElemRef = helperMeasuredAntennaFromDirectivity(elemData.p3D(:),dirMat,elemData.freq,azVec,elVec);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >pattern(mElemRef,elemData.freq,azVec,elVec,PatternOptions=pOptsElem)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >title(</span><span style="color: rgb(167, 9, 245);">"Element Pattern — Reference"</span><span >)</span></span></div></div></div><h2  class = 'S4'><span class="_richTextNode">Evaluate Element Reconstruction Accuracy</span></h2><div  class = 'S1'><span class="_richTextNode">Calculate the root-mean-squared error (RMSE) and mean absolute error (MAE) over the full 3-D pattern to quantify overall reconstruction accuracy.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >elemAbsErr = abs(elemRecon - elemData.p3D);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >elemRMSE = sqrt(mean(elemAbsErr.^2,</span><span style="color: rgb(167, 9, 245);">"all"</span><span >));</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >elemMAE = mean(elemAbsErr,</span><span style="color: rgb(167, 9, 245);">"all"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Element RMSE: " </span><span >+ round(elemRMSE,2) + </span><span style="color: rgb(167, 9, 245);">" dB"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Element MAE:  " </span><span >+ round(elemMAE,2) + </span><span style="color: rgb(167, 9, 245);">" dB"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Visualize the spatial error distribution.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >tiledlayout(1,3)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >nexttile</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >helperPatternCustomRectangular(elemRecon,90-elVec,azVec, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    Title=</span><span style="color: rgb(167, 9, 245);">"AI Reconstruction"</span><span >,MagnitudeScale=[elemPeakRef-40 elemPeakRef])</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >nexttile</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >helperPatternCustomRectangular(elemData.p3D,90-elVec,azVec, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    Title=</span><span style="color: rgb(167, 9, 245);">"Reference"</span><span >,MagnitudeScale=[elemPeakRef-40 elemPeakRef])</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >nexttile</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >helperPatternCustomRectangular(elemAbsErr,90-elVec,azVec, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    Title=</span><span style="color: rgb(167, 9, 245);">"Absolute Error (dB)"</span><span >)</span></span></div></div></div><h2  class = 'S4'><span class="_richTextNode">Load and Visualize Array Measurement Data</span></h2><div  class = 'S1'><span class="_richTextNode">Load the measurement data for a 4x4 uniform rectangular array at 28 GHz with 0.7</span><span style="font-family: STIXGeneral-webfont, serif; font-style: italic; font-weight: 400; color: rgb(33, 33, 33);">λ</span><span class="_richTextNode"> element spacing. The array pattern has narrower beams and more sidelobe structure than the element.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrData = load(</span><span style="color: rgb(167, 9, 245);">"patchArray4x4_28GHz_uniformPatternData.mat"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(arrData.description)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Visualize the array measurement slices.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >polarpattern(arrData.elcut1.el,arrData.elcut1.data,TitleTop=</span><span style="color: rgb(167, 9, 245);">"Array — Elevation Cut (az = 0 deg)"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >polarpattern(arrData.elcut2.el,arrData.elcut2.data,TitleTop=</span><span style="color: rgb(167, 9, 245);">"Array — Elevation Cut (az = 90 deg)"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >polarpattern(arrData.azcut.az,arrData.azcut.data,TitleTop=</span><span style="color: rgb(167, 9, 245);">"Array — Azimuthal Cut (el = 0 deg)"</span><span >)</span></span></div></div></div><h2  class = 'S4'><span class="_richTextNode">Reconstruct Array 3-D Pattern from Sparse Measurements</span></h2><div  class = 'S1'><span class="_richTextNode">Assemble the sparse measurements and reconstruct the array pattern.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrSparseData = [arrData.elcut1.data,arrData.elcut2.data,arrData.azcut.data];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrSparseAz = [arrData.elcut1.az*ones(size(arrData.elcut1.el)), </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    arrData.elcut2.az*ones(size(arrData.elcut2.el)),arrData.azcut.az];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrSparseEl = [arrData.elcut1.el,arrData.elcut2.el,zeros(size(arrData.azcut.az))];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >[arrRecon,~,~] = patternFromAI(arrSparseData, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    arrSparseAz,arrSparseEl,AngleConvention=</span><span style="color: rgb(167, 9, 245);">"az-el"</span><span >);</span></span></div></div></div><h2  class = 'S4'><span class="_richTextNode">Visualize Reconstructed and Reference Array Patterns</span></h2><div  class = 'S1'><span class="_richTextNode">Import the reconstructed pattern into a </span><span class="_richTextNode" style=' font-family: monospace;'>measuredAntenna</span><span class="_richTextNode"> object.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >mArrRecon = helperMeasuredAntennaFromDirectivity(arrRecon(:),dirMat,arrData.freq,azVec,elVec);</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Visualize the reconstructed array pattern. Set the magnitude scale to a 40 dB dynamic range below the reference peak, which captures the main beam, sidelobes, and the upper portion of the null structure while suppressing noise-floor clutter.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrPeakRef = max(arrData.p3D(:));</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >pOpts = PatternPlotOptions(MagnitudeScale=[arrPeakRef-40,arrPeakRef]);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >pattern(mArrRecon,arrData.freq,azVec,elVec,PatternOptions=pOpts)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >title(</span><span style="color: rgb(167, 9, 245);">"Array Pattern — AI Reconstruction"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Compare against the reference pattern.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >mArrRef = helperMeasuredAntennaFromDirectivity(arrData.p3D(:),dirMat,arrData.freq,azVec,elVec);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >pattern(mArrRef,arrData.freq,azVec,elVec,PatternOptions=pOpts)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >title(</span><span style="color: rgb(167, 9, 245);">"Array Pattern — Reference"</span><span >)</span></span></div></div></div><h2  class = 'S4'><span class="_richTextNode">Evaluate Array Reconstruction Accuracy</span></h2><div  class = 'S1'><span class="_richTextNode">Compute the reconstruction error.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrAbsErr = abs(arrRecon - arrData.p3D);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrRMSE = sqrt(mean(arrAbsErr.^2,</span><span style="color: rgb(167, 9, 245);">"all"</span><span >));</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrMAE = mean(arrAbsErr,</span><span style="color: rgb(167, 9, 245);">"all"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Array RMSE: " </span><span >+ round(arrRMSE,2) + </span><span style="color: rgb(167, 9, 245);">" dB"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Array MAE:  " </span><span >+ round(arrMAE,2) + </span><span style="color: rgb(167, 9, 245);">" dB"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Visualize the spatial error distribution.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >tiledlayout(1,3)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >nexttile</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >helperPatternCustomRectangular(arrRecon,90-elVec,azVec, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    Title=</span><span style="color: rgb(167, 9, 245);">"AI Reconstruction"</span><span >,MagnitudeScale=[arrPeakRef-40 arrPeakRef])</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >nexttile</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >helperPatternCustomRectangular(arrData.p3D,90-elVec,azVec, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    Title=</span><span style="color: rgb(167, 9, 245);">"Reference"</span><span >,MagnitudeScale=[arrPeakRef-40 arrPeakRef])</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >nexttile</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >helperPatternCustomRectangular(arrAbsErr,90-elVec,azVec, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    Title=</span><span style="color: rgb(167, 9, 245);">"Absolute Error (dB)"</span><span >)</span></span></div></div></div><h2  class = 'S4'><span class="_richTextNode">Compare Element and Array Reconstruction Error Distribution</span></h2><div  class = 'S1'><span class="_richTextNode">Compare element and array reconstruction accuracy on the same axes using the cumulative distribution of absolute error. This directly shows the fraction of angular coordinates that fall below a given error threshold.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >elemErrSorted = sort(elemAbsErr(:));</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrErrSorted = sort(arrAbsErr(:));</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >nPts = numel(elemErrSorted);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >cdfPct = (1:nPts).'/nPts*100;</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >hElem = stairs(elemErrSorted,cdfPct,DisplayName=</span><span style="color: rgb(167, 9, 245);">"Element"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >hold </span><span style="color: rgb(167, 9, 245);">on</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >hArr = stairs(arrErrSorted,cdfPct,DisplayName=</span><span style="color: rgb(167, 9, 245);">"Array (uniform)"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >hold </span><span style="color: rgb(167, 9, 245);">off</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >idx3dB_elem = find(elemErrSorted&lt;=3,1,</span><span style="color: rgb(167, 9, 245);">"last"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >idx3dB_arr = find(arrErrSorted&lt;=3,1,</span><span style="color: rgb(167, 9, 245);">"last"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >datatip(hElem,DataIndex=idx3dB_elem,Location=</span><span style="color: rgb(167, 9, 245);">"southeast"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >datatip(hArr,DataIndex=idx3dB_arr,Location=</span><span style="color: rgb(167, 9, 245);">"southeast"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >xlabel(</span><span style="color: rgb(167, 9, 245);">"Absolute Error (dB)"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >ylabel(</span><span style="color: rgb(167, 9, 245);">"Percentage of Angular Coordinates"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >title(</span><span style="color: rgb(167, 9, 245);">"Cumulative Distribution of Reconstruction Error"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >legend(Location=</span><span style="color: rgb(167, 9, 245);">"southeast"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >grid </span><span style="color: rgb(167, 9, 245);">on</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">The datatips mark the 3 dB error threshold: 96% of angular coordinates have less than 3 dB error for the element, and 69% for the array. The element pattern, with its broad smooth structure, is substantially easier to reconstruct than the array pattern, whose narrow beams and deep nulls are more challenging for the model to recover from sparse observations.</span></div><h2  class = 'S4'><span class="_richTextNode">Estimate Array Pattern Using Pattern Multiplication</span></h2><div  class = 'S1'><span class="_richTextNode">Pattern multiplication decomposes the array pattern into the product of the element pattern and the array factor. If the element pattern can be reconstructed from sparse measurements, the full array pattern can be obtained by applying the known array geometry — without measuring the array at all.</span></div><div  class = 'S1'><span class="_richTextNode">The reconstructed element </span><span class="_richTextNode" style=' font-family: monospace;'>measuredAntenna</span><span class="_richTextNode"> created earlier includes an E-field derived from directivity assuming linear polarization and zero phase. These assumptions are reasonable for a linearly polarized patch element and enable </span><span class="_richTextNode" style=' font-family: monospace;'>patternMultiply</span><span class="_richTextNode"> to compute the array factor coherently.</span></div><div  class = 'S1'><span class="_richTextNode">Construct a </span><span class="_richTextNode" style=' font-family: monospace;'>rectangularArray</span><span class="_richTextNode"> using the reconstructed element and the known array geometry, then call </span><span class="_richTextNode" style=' font-family: monospace;'>patternMultiply</span><span class="_richTextNode"> to estimate the array pattern.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrFromRecon = rectangularArray(Element=mElemRecon,Size=[4 4], </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    RowSpacing=arrData.spacing,ColumnSpacing=arrData.spacing);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >[arrPM,~,~] = patternMultiply(arrFromRecon,arrData.freq,azVec,elVec);</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Visualize the pattern multiplication result.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrPM = arrPM.';</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >mArrPM = helperMeasuredAntennaFromDirectivity(arrPM(:),dirMat,arrData.freq,azVec,elVec);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >pattern(mArrPM,arrData.freq,azVec,elVec,PatternOptions=pOpts)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >title(</span><span style="color: rgb(167, 9, 245);">"Array Pattern — Pattern Multiplication"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Compute the estimation error and compare to the AI reconstruction. Pattern multiplication applies exact superposition, so it predicts beam shape and peak directivity accurately. Its errors concentrate in deep null regions and in the back hemisphere, where mutual coupling, finite-array truncation effects, and ground plane diffraction cause the embedded element pattern to deviate from the isolated-element assumption.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrPMErr = abs(arrPM - arrData.p3D);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrPMRMSE = sqrt(mean(arrPMErr.^2,</span><span style="color: rgb(167, 9, 245);">"all"</span><span >));</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrPMMAE = mean(arrPMErr,</span><span style="color: rgb(167, 9, 245);">"all"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Pattern multiplication RMSE (full sphere): " </span><span >+ round(arrPMRMSE,2) + </span><span style="color: rgb(167, 9, 245);">" dB"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Pattern multiplication MAE (full sphere):  " </span><span >+ round(arrPMMAE,2) + </span><span style="color: rgb(167, 9, 245);">" dB"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Evaluate the accuracy within the main beam and sidelobe region, defined as within 10 dB of the peak, where pattern multiplication excels.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >mainBeamMask = arrData.p3D &gt;= (arrPeakRef - 10);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Within 10 dB of peak:"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"  AI reconstruction MAE:       " </span><span >+ round(mean(arrAbsErr(mainBeamMask)),2) + </span><span style="color: rgb(167, 9, 245);">" dB"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"  Pattern multiplication MAE:  " </span><span >+ round(mean(arrPMErr(mainBeamMask)),2) + </span><span style="color: rgb(167, 9, 245);">" dB"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">The two approaches have complementary strengths. Pattern multiplication excels in the main beam region because it applies physics-based superposition exactly, while direct AI reconstruction captures mutual coupling effects that pattern multiplication ignores, yielding lower overall RMSE.</span></div><h2  class = 'S4'><span class="_richTextNode">Reconstruct Beamsteered Array Pattern Directly from Sparse Measurements</span></h2><div  class = 'S1'><span class="_richTextNode">In 5G NR beam management, the array is steered to different directions using phase tapering. Load the measurement data for the array steered to azimuth 30 degrees, elevation 60 degrees.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrSteeredData = load(</span><span style="color: rgb(167, 9, 245);">"patchArray4x4_28GHz_steeredPatternData.mat"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(arrSteeredData.description)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Attempt reconstruction using the two standard elevation cuts plus one azimuthal cut. Note that none of these cuts pass through the steered beam peak.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredSparseData = [arrSteeredData.elcut1.data,arrSteeredData.elcut2.data,arrSteeredData.azcut.data];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredSparseAz = [arrSteeredData.elcut1.az*ones(size(arrSteeredData.elcut1.el)), </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    arrSteeredData.elcut2.az*ones(size(arrSteeredData.elcut2.el)),arrSteeredData.azcut.az];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredSparseEl = [arrSteeredData.elcut1.el,arrSteeredData.elcut2.el,zeros(size(arrSteeredData.azcut.az))];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >[steeredRecon,~,~] = patternFromAI(steeredSparseData, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    steeredSparseAz,steeredSparseEl,AngleConvention=</span><span style="color: rgb(167, 9, 245);">"az-el"</span><span >);</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Visualize the reconstruction from standard cuts.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredPeak = max(arrSteeredData.p3D(:));</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >pOptsSteered = PatternPlotOptions(MagnitudeScale=[steeredPeak-40,steeredPeak]);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >mSteered = helperMeasuredAntennaFromDirectivity(steeredRecon(:),dirMat,arrData.freq,azVec,elVec);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >pattern(mSteered,arrData.freq,azVec,elVec,PatternOptions=pOptsSteered)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >title(</span><span style="color: rgb(167, 9, 245);">"Steered Array — AI, Two Elevation Cuts"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Compare against the reference pattern.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >mSteeredRef = helperMeasuredAntennaFromDirectivity(arrSteeredData.p3D(:),dirMat,arrData.freq,azVec,elVec);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >pattern(mSteeredRef,arrData.freq,azVec,elVec,PatternOptions=pOptsSteered)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >title(</span><span style="color: rgb(167, 9, 245);">"Steered Array — Reference"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Compute the reconstruction error.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredAbsErr = abs(steeredRecon - arrSteeredData.p3D);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredRMSE = sqrt(mean(steeredAbsErr.^2,</span><span style="color: rgb(167, 9, 245);">"all"</span><span >));</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Steered (two elevation cuts + one azimuthal cut):"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"  RMSE: " </span><span >+ round(steeredRMSE,2) + </span><span style="color: rgb(167, 9, 245);">" dB"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"  Reconstructed peak: " </span><span >+ round(max(steeredRecon(:)),1) + </span><span style="color: rgb(167, 9, 245);">" dBi"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"  Actual peak: " </span><span >+ round(max(arrSteeredData.p3D(:)),1) + </span><span style="color: rgb(167, 9, 245);">" dBi"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">The reconstruction clearly underestimates the main beam. The standard cuts do not pass through the steered beam peak, so the maximum observed directivity in the sparse data is much lower than the actual peak. The model cannot recover amplitude information absent from the input.</span></div><h2  class = 'S4'><span class="_richTextNode">Improve Reconstruction with Additional Targeted Measurement Cut</span></h2><div  class = 'S1'><span class="_richTextNode">Add a third elevation cut at azimuth 30 degrees, which passes directly through the steered beam. When the beam is steered off-broadside, standard principal-plane cuts may miss the main lobe entirely, so this targeted cut provides the model with amplitude information near the peak. It also demonstrates the flexibility of </span><span class="_richTextNode" style=' font-family: monospace;'>patternFromAI</span><span class="_richTextNode"> — measurements need not be restricted to principal planes.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredSparseDataExtraCut = [steeredSparseData,arrSteeredData.elcut3.data];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredSparseAzExtraCut = [steeredSparseAz,arrSteeredData.elcut3.az*ones(size(arrSteeredData.elcut3.el))];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredSparseElExtraCut = [steeredSparseEl,arrSteeredData.elcut3.el];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Samples: two elevation + one azimuthal = " </span><span >+ numel(steeredSparseData) + </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    </span><span style="color: rgb(167, 9, 245);">", three elevation + one azimuthal = " </span><span >+ numel(steeredSparseDataExtraCut))</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >[steeredReconExtraCut,~,~] = patternFromAI(steeredSparseDataExtraCut, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    steeredSparseAzExtraCut,steeredSparseElExtraCut,AngleConvention=</span><span style="color: rgb(167, 9, 245);">"az-el"</span><span >);</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Visualize the improved reconstruction.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >mSteeredExtraCut = helperMeasuredAntennaFromDirectivity(steeredReconExtraCut(:),dirMat,arrData.freq,azVec,elVec);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >pattern(mSteeredExtraCut,arrData.freq,azVec,elVec,PatternOptions=pOptsSteered)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >title(</span><span style="color: rgb(167, 9, 245);">"Steered Array — AI, Three Elevation Cuts"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Evaluate the improvement in reconstruction accuracy.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredAbsErrExtraCut = abs(steeredReconExtraCut - arrSteeredData.p3D);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredRMSEExtraCut = sqrt(mean(steeredAbsErrExtraCut.^2,</span><span style="color: rgb(167, 9, 245);">"all"</span><span >));</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Steered (three elevation cuts + one azimuthal cut):"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"  RMSE: " </span><span >+ round(steeredRMSEExtraCut,2) + </span><span style="color: rgb(167, 9, 245);">" dB"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"  Reconstructed peak: " </span><span >+ round(max(steeredReconExtraCut(:)),1) + </span><span style="color: rgb(167, 9, 245);">" dBi"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"  Actual peak: " </span><span >+ round(max(arrSteeredData.p3D(:)),1) + </span><span style="color: rgb(167, 9, 245);">" dBi"</span><span >)</span></span></div></div></div><h2  class = 'S4'><span class="_richTextNode">Estimate Beamsteered Array Pattern Using Pattern Multiplication</span></h2><div  class = 'S1'><span class="_richTextNode">As an alternative approach, use the reconstructed element pattern with pattern multiplication. This offers a measurement-free path to steered beam characterization — apply the known steering phase shifts to the reconstructed element to obtain the full steered pattern without any steered-array measurements.</span></div><div  class = 'S1'><span class="_richTextNode">Construct the steered array as before for the uniform array, but now specify </span><span class="_richTextNode" style=' font-family: monospace;'>PhaseShift</span><span class="_richTextNode"> to apply the beam steering.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >arrSteeredFromRecon = rectangularArray(Element=mElemRecon,Size=[4 4], </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    RowSpacing=arrData.spacing,ColumnSpacing=arrData.spacing, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    PhaseShift=arrSteeredData.phaseShift);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >[steeredPM,~,~] = patternMultiply(arrSteeredFromRecon,arrData.freq,azVec,elVec);</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Visualize the steered pattern multiplication result.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredPM = steeredPM.';</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >mSteeredPM = helperMeasuredAntennaFromDirectivity(steeredPM(:),dirMat,arrData.freq,azVec,elVec);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >pattern(mSteeredPM,arrData.freq,azVec,elVec,PatternOptions=pOptsSteered)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >title(</span><span style="color: rgb(167, 9, 245);">"Steered Array — Pattern Multiplication"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Compute the estimation error.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredPMErr = abs(steeredPM - arrSteeredData.p3D);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >steeredPMRMSE = sqrt(mean(steeredPMErr.^2,</span><span style="color: rgb(167, 9, 245);">"all"</span><span >));</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Steered pattern multiplication RMSE: " </span><span >+ round(steeredPMRMSE,2) + </span><span style="color: rgb(167, 9, 245);">" dB"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Steered pattern multiplication peak: " </span><span >+ round(max(steeredPM(:)),1) + </span><span style="color: rgb(167, 9, 245);">" dBi" </span><span >+ </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    </span><span style="color: rgb(167, 9, 245);">" (actual: " </span><span >+ round(max(arrSteeredData.p3D(:)),1) + </span><span style="color: rgb(167, 9, 245);">" dBi)"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Pattern multiplication correctly predicts the steered beam peak and direction because it applies the known phase shifts analytically. It achieves this without any steered-array measurements — only the element pattern and array geometry are needed.</span></div><h2  class = 'S4'><span class="_richTextNode">Summary</span></h2><div  class = 'S1'><span class="_richTextNode">Tabulate the reconstruction accuracy across all scenarios.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >scenarios = [</span><span style="color: rgb(167, 9, 245);">"Element (two elevation + one azimuthal)"</span><span >; </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >             </span><span style="color: rgb(167, 9, 245);">"Array, uniform (two elevation + one azimuthal)"</span><span >; </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >             </span><span style="color: rgb(167, 9, 245);">"Array, pattern multiplication"</span><span >; </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >             </span><span style="color: rgb(167, 9, 245);">"Array, steered (two elevation + one azimuthal)"</span><span >; </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >             </span><span style="color: rgb(167, 9, 245);">"Array, steered (three elevation + one azimuthal)"</span><span >; </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >             </span><span style="color: rgb(167, 9, 245);">"Array, steered pattern multiplication"</span><span >];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >RMSE = [elemRMSE;arrRMSE;arrPMRMSE;steeredRMSE;steeredRMSEExtraCut;steeredPMRMSE];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >MAE = [elemMAE;arrMAE;arrPMMAE;mean(steeredAbsErr,</span><span style="color: rgb(167, 9, 245);">"all"</span><span >); </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >       mean(steeredAbsErrExtraCut,</span><span style="color: rgb(167, 9, 245);">"all"</span><span >);mean(steeredPMErr,</span><span style="color: rgb(167, 9, 245);">"all"</span><span >)];</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >summaryTable = table(scenarios,round(RMSE,2),round(MAE,2), </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    VariableNames=[</span><span style="color: rgb(167, 9, 245);">"Scenario"</span><span >,</span><span style="color: rgb(167, 9, 245);">"RMSE (dB)"</span><span >,</span><span style="color: rgb(167, 9, 245);">"MAE (dB)"</span><span >])</span></span></div></div></div><h3  class = 'S6'><span class="_richTextNode">Reconstruction Accuracy</span></h3><ul  class = 'S2'><li  class = 'S3'><span class="_richTextNode">The element pattern, with its smooth angular structure, is reconstructed most accurately (RMSE &lt; 1.2 dB).</span></li><li  class = 'S3'><span class="_richTextNode">Array patterns are more challenging due to narrower beams and sidelobe structure, but direct AI reconstruction still achieves useful accuracy (RMSE ~ 5 dB) and captures mutual coupling effects implicitly.</span></li><li  class = 'S3'><span class="_richTextNode">All AI reconstructions complete in under a minute from sparse measurements, as compared to the expensive and time-consuming full 3-D measurement sweeps or full-wave simulations traditionally needed for complete pattern characterization.</span></li></ul><h3  class = 'S6'><span class="_richTextNode">AI Versus Pattern Multiplication</span></h3><ul  class = 'S2'><li  class = 'S3'><span class="_richTextNode">Pattern multiplication from the AI-reconstructed element is more accurate than direct AI reconstruction in the main beam region, because it applies exact superposition physics.</span></li><li  class = 'S3'><span class="_richTextNode">Direct AI reconstruction of the full array captures mutual coupling and finite-array effects that pattern multiplication ignores, yielding better accuracy in null regions and the back hemisphere, and lower overall RMSE.</span></li><li  class = 'S3'><span class="_richTextNode">The choice depends on the application: pattern multiplication is preferable when main-beam fidelity is the priority or when multiple beam states must be characterized from a single element measurement, while direct AI on the array is preferable when full-sphere accuracy matters.</span></li></ul><h3  class = 'S6'><span class="_richTextNode">Beamsteering and Measurement Strategy</span></h3><ul  class = 'S2'><li  class = 'S3'><span class="_richTextNode">For steered beams, the placement of the measurement cuts matters: including a cut through the beam direction improves peak recovery from 10.4 to 18.1 dBi (actual: 19.0 dBi).</span></li><li  class = 'S3'><span class="_richTextNode">Pattern multiplication predicts the steered beam correctly without any steered-array measurements — only the element characterization plus known phase shifts are needed.</span></li></ul><h2  class = 'S4'><span class="_richTextNode">Supporting Functions</span></h2><div  class = 'S1'><span class="_richTextNode">The following sections define the local helper functions used in this example to import directivity data and customize pattern visualizations.</span></div><h3  class = 'S6'><span class="_richTextNode">Create Measured Antenna from Directivity</span></h3><div  class = 'S1'><span class="_richTextNode">The </span><span class="_richTextNode" style=' font-family: monospace;'>helperMeasuredAntennaFromDirectivity</span><span class="_richTextNode"> local function creates a </span><span class="_richTextNode" style=' font-family: monospace;'>measuredAntenna</span><span class="_richTextNode"> object from a directivity pattern in dBi. It derives a synthetic E-field as </span><span texencoding="E_\theta = \sqrt{D}" style="vertical-align:-6px"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAAAwCAYAAADXcc6UAAAJ5ElEQVR4AeycaWxUVRTHZyltKVQRq8W2tFOCaCQiaogLwaiIC4oGl7jhAsSIxkhMNGo0Ll+MS4yJfEBANgERXBFQAVGIhE0ICshiEAptgdoqIm0pdPN3LnMfrzNv3ptXO8OUec05c89dz73nf++599330oDP+0tLC3jApyXsPp8HvAd8mlogTYftrXgP+DS1QJoO21vxKQB8KBSaXlpa2ppIRseX5qF6wJutcQpkALkZtY/CSaX2Ap/UTp7mykb7/f7De/bsyYT9ieKysrKRZjt6wJutkWSZ1d4D0Ee2trbOQHUjnDTygE+aqS0VjSa1C+BPJEwqecAn1dxtlQH4OFLW4953EiaVPOCTau6TynDzVxLrh5ufSph08oBPuslPKGS1jwX0hqNHj845kZLcXw/45NpbaWO1ZwP6/UTmVVVV1REmnTzgk25ynw/QH2TFd2tubj4lbl6GbAs8M/NNbpN2wq5ulahXI41bsJeEBQKBgJzmfy8vL/+JqC0VFBTkYM/X4QWxcCCvHv6N/EWEb8IX2jZKpi3wPPS/wInzAsothjWtampqKiTdfNmQ0dLScjUz+X0KyfPoekKPLCwAOGLPwdhqmkV2VNL+/fvrweFV+A4yy2FF1J/P+eBcwYG8XOKPwVvxJM9QYBvgT8/Pzz8X2ZJsgdc1aPCYlnFPk5ip+3U8HDbv3bt3DR0YT3wmyjcRemRtAQGopaGhIS7gI5rI1nEwee3gwYPV4bjYfzX2fwF8hpLWAAaPdu3adV1hYeHZxKMoLuCpdSms6NixY0uVEOOHDlWi3APe2j5dSH4EXmgCjagzlZSUlFLqHFionIW2XYRI3rdv3yoweFbSAT+UmZn5gciR7Ag8rqmEBkSpHEo2cQr9M7KRiHgVW8G6iDQvigWKi4vFXedhT9ernXPBDTShyXbxMSkmAf6BcOG7wXBAWDYCR+BpQN4eqQrI3yvB5gd3M5F9ydiLbIqmXRbgyaGuhn15kdvBY3tx4aoashMOzRT8FlZE+QeVYPpxBJ7ZOUyXp4GomcZsKoFf1mXSIeTg1KuoqKjQzVjZa4uw5XBsOIV6LbAroq4BPB41CofIxtCzzZR2jUlWohPwfkopF0ND9ewXUY8fpL9HR5ZQLi2IvfYqQNickZHxjpsBYztZ7bJdCvBuqvqYaAOpkAcLbaioqPhbBDumj+ZH6uLIsrbAh0KhK6hwJiy0cteuXfp072eVD8MIb6NgCKf8DVIggSyD/wWdru4TIssznh3/p4+09xTueiVtyCFrZH5+fjfkeMjPAhkDr2T/3RNPBXMZ6hmrHXmZOc9G1rj5wCg3spwt8BS+CVZE5VsYuDa8uKqlGOE5OiJup1UVcvjhMqIY4z8uzEHnLIfiqZSdydhn0aEJsJzMxZjZPC49TNyRGOtQ7Bei4HTYNVHXvN3GBTx18rUiMNqnZR3aAk9l5ealcGNj4wAOJcaljVzYkF5LmbjcPGC/grt7/fjx499QbyCTZitpPZDjIg6NA8362yPThuONllVnAP0NjPeZ6CQ0vzuXRzOrKm3SGKu4+cMkzoPdUgY2vlYqobsOjxG13UqeBV+i06hfpmUdxgQ+Ly9PboOukoIoPMC+skVkzXRgDfJubo+M0yNxK+oCwJ+g/GIMP0ZO/EyaOcQLKCwvKghSmwD8Wfq+QHpJKJdUav9kDFcwNtvJRL58ZXMPNpxL3QZpww2znQ6hfBYsXmYFYRPsRJkUMLwE9v6ReBuKCXz37t3FPQXDpWO5lyqniwgG/hZtDOPi5wlCtSUEg8F/kWUgfSXsZCxX0vKplO7241qIEcp20IVLrXa9kAkEAub9XbbVGGpOJjNZRhAT8Al8TXjrmSKYOSbwzGbzjLEEntO87dehdOBqlI2nrddY6WqVEPdhhHMkZBXoiSXRTsP02wCRsY2i42rfJ4wi8seSuLm9B2B0mYG3xIH22xA6X9QJ1J9jtr1Ojwk8BQzg2Zct93EG0+bOHqDPo55BzNbpdKIaVznJSEQgvYhA6KD8xMN4jlN+qtf9xGXvwKCrw/E8xn17WG4T9O7dexAJAyhrTBTicVPPnj3PwH7ypY48BlayvW53qsxB8jbqXC7l0PtHXV3dUyJHsiXwGFlOoOeHC//s5M6lnNQB0K9EFsYY1xH2g+U0fJzQTOIJZDCd9oYP4xrunnFber5gMCirXbaGj8yDj1fOzc01Vjt1HN08Ni+lL0oXoNfRx7uqq6trqRtFlsBTytU1bd++fbNQMhtlBvDE76UdAfc2JsUKM+s88n+A4yJWWXtO9cZTCF7HTxu2B7G4OhIuVF9f/zHjVV/PEA7v1auX2r7C2T7GK2/SRpH3BXr/0eluQkA0gKed5XZ15VEZuy6Cz6Ks9OsGxvxrrDqxgL9FV6CRjVq2CnEt/dnrxe0N5hAhq1sXu4m6zbiaQQz8Ws21tbUjSJcLhS24Lv0iQdfpNCEvq8S4n0qHMXYgOzt7jMgmvo/0bnC73Ly0g52GSxhmsXFYbBMEwWBUVlbWBnRdRE4V9W7E3muRY1IU8OIuaMBQiDwk4oYq0KdPn36hUOgReDnuTF7+X4ayJZWVlRWiSWY/9ULwxkhXw9PCnaSLXtdXl9J2KjGPSWZQ5Vnd6B5jHI1Nylh1Ti9UjDpmATBlr1ZvRSWd1S93Kn7eEXQlrz8sb90mcMdQBgaz0HU2PJfzWH8WVKxJIk0pFgCUwE8GjcxCgbxLzyCuiAGMz8nJqSVP39o1o2An6TPg61UhfkgzVjsXNcrtkWZ1PfkE6Yd4vDMbjRY6H4Xffatv4rHFBYAxWEYhi4dQXozITZ16hCUeF9FGH2y9EDA/j6gwmfQW3hHUgtEy8p8nvwRbytdRT6O/gFX+QGVl5V+kO5IZ+CZm50NwD9jvlpllxmfCdEpeC4ryQ/KjGYPcSgfl/v9FHjHqdXonDwVcNQQAUe6eMY4DkFYeWz9UGS5+mEy7sf0IOAuOwgFwg3ABeYPg25HHEU6Aq1yoScy/QmE169N6jqkzmRjkXeKr6OxkwtOCIj6hupdDVg7jlAnwXeTjbioN2LziO6xf4dW8GAPoT7aCnAemEA9yxXsnily5P8qnLMmjLqtbXecyvm4csuRxKg/Z8ASp2PmEAC8DZdXLXl4N4FPhCRii4siRI5eJoST/NGPjmZ5x3QXLVzbGoy3xlKOEAc+qL8elD4XHwk+yB71UU1NzJOUsYN0hV6mM72sqGFfSeIDZxBvhlKWEAZ+yI05Mx3iyazFcO97N8svWxKhuX6se8O2zW1QtwFZfzrLa1+Ld1CNeVKEUSvCA7yAwcPc7AH0aE+C9Dmoyoc14wHegeQF/LKt9fgc2mbCmPOATZtrUbtgDPrXxSVjvPOATZtrUbvg/AAAA//8l1FJ1AAAABklEQVQDAKEPCKxfUDf4AAAAAElFTkSuQmCC" width="63" height="24" /></span><span class="_richTextNode">, assuming linear polarization and zero phase, to satisfy the E-field requirement of </span><span class="_richTextNode" style=' font-family: monospace;'>measuredAntenna</span><span class="_richTextNode">, while storing the original directivity values for visualization via the </span><span class="_richTextNode" style=' font-family: monospace;'>pattern</span><span class="_richTextNode"> function.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span style="color: rgb(14, 0, 255);">function </span><span >mAnt = helperMeasuredAntennaFromDirectivity(D_dBi,dirMat,freq,azVec,elVec)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    D_lin = 10.^(D_dBi/10);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    E = zeros(numel(D_dBi),3);</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    E(:,2) = sqrt(abs(D_lin));</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    mAnt = measuredAntenna(E=E,Directivity=D_dBi, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >        Direction=dirMat,FieldFrequency=freq, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >        FieldCoordinate=</span><span style="color: rgb(167, 9, 245);">"polar"</span><span >,Azimuth=azVec(:),Elevation=elVec(:));</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span style="color: rgb(14, 0, 255);">end</span></span></div></div></div><h3  class = 'S6'><span class="_richTextNode">Plot 3-D Pattern in Rectangular Coordinate System and Customize Axes</span></h3><div  class = 'S1'><span class="_richTextNode">The </span><span class="_richTextNode" style=' font-family: monospace;'>helperPatternCustomRectangular</span><span class="_richTextNode"> local function plots the angular distribution of the input quantity, such as directivity pattern or absolute error, in the rectangular coordinate system and configures some of the axes properties for display purposes.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span style="color: rgb(14, 0, 255);">function </span><span >helperPatternCustomRectangular(data,theta,phi,options)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    </span><span style="color: rgb(14, 0, 255);">arguments</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >        data</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >        theta</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >        phi</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >        options.Title = </span><span style="color: rgb(167, 9, 245);">""</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >        options.MagnitudeScale = []</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    </span><span style="color: rgb(14, 0, 255);">end</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    patternCustom(data,theta,phi,CoordinateSystem=</span><span style="color: rgb(167, 9, 245);">"rectangular"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    </span><span style="color: rgb(14, 0, 255);">if </span><span >~isempty(options.MagnitudeScale)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >        clim(options.MagnitudeScale)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    </span><span style="color: rgb(14, 0, 255);">end</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    </span><span style="color: rgb(14, 0, 255);">if </span><span >options.Title ~= </span><span style="color: rgb(167, 9, 245);">""</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >        title(options.Title)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    </span><span style="color: rgb(14, 0, 255);">end</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    view(2)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    colorbar</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    xlim([-1 180])</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    xticks(0:90:180)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    xtickangle(0)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    ylim([0 360])</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    yticks(0:90:360)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    ytickangle(0)</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span >    box </span><span style="color: rgb(167, 9, 245);">on</span></span></div></div><div class="inlineWrapper"><div  class = 'S5'><span style="white-space: pre"><span style="color: rgb(14, 0, 255);">end</span></span></div></div></div><h2  class = 'S4'><span class="_richTextNode">References</span></h2><div  class = 'S1'><span class="_richTextNode">[1] P. J. DiMeo, S. Sivaramakrishnan, and V. Iyer, "AI-Based 3D Antenna Pattern Reconstruction," </span><span class="_richTextNode" style=' font-style: italic;'>2024 IEEE International Symposium on Antennas and Propagation and INC/USNC-URSI Radio Science Meeting (AP-S/INC-USNC-URSI)</span><span class="_richTextNode">, Firenze, Italy, 2024, pp. 1-2, doi: </span><a href = "https://doi.org/10.1109/AP-S/INC-USNC-URSI52054.2024.10686954"><span class="_richTextNode">10.1109/AP-S/INC-USNC-URSI52054.2024.10686954</span></a><span class="_richTextNode">.</span></div><div  class = 'S1'><span class="_richTextNode">[2] F. Dourado, G. Zucchelli, and S. Sivaramakrishnan, "Revolutionize Your Phased Array Testing: Fast Antenna Pattern Measurements, Analysis, and AI-Based 3D Pattern Reconstruction," Workshop IWTu2, </span><span class="_richTextNode" style=' font-style: italic;'>2026 IEEE International Microwave Symposium (IMS)</span><span class="_richTextNode">, Boston, MA, June 2026.</span></div><div  class = 'S1'><span class="_richTextNode">[3] V. Iyer, S. Sekharan, P. DiMeo, and S. Sivaramakrishnan, "AI in Antenna Design and Analysis: From Pretrained Models to System-Level Integration," Workshop HD-7, </span><span class="_richTextNode" style=' font-style: italic;'>2026 IEEE International Symposium on Antennas and Propagation and USNC-URSI Radio Science Meeting (AP-S/URSI)</span><span class="_richTextNode">, Detroit, MI, July 2026.</span></div><div  class = 'S1'><span class="_richTextNode" style=' font-style: italic;'>AP-S/URSI 2026 Technical Workshop — HD-7: AI in Antenna Design and Analysis: From Pretrained Models to System-Level Integration</span></div><div  class = 'S1'><span class="_richTextNode" style=' font-style: italic;'>Copyright 2026 The MathWorks, Inc.</span></div>
+<br>
+<!-- 
+##### SOURCE BEGIN #####
+%% Reconstruct 3-D Radiation Pattern of 5G Phased Array from Sparse Measurements Using AI
+% This example demonstrates how to reconstruct the full 3-D radiation pattern 
+% of a 5G mmWave phased array antenna from a small number of measurement cuts. 
+% The reconstruction employs the artificial intelligence (AI) based |patternFromAI| 
+% function from Antenna Toolbox™ to infer full 3-D patterns from sparse observations. 
+% The workflow simulates a practical over-the-air (OTA) testing scenario with 
+% the following constraints and considerations:
+%% 
+% * Only a few 2-D pattern slices are available from chamber measurements
+% * The full 3-D pattern must be inferred from this sparse data
+% * Pattern multiplication enables array-level characterization from element-level 
+% measurements
+%% 
+% The example uses synthetic data generated from full-wave simulation of a 28 
+% GHz patch antenna array to provide a ground-truth reference for evaluating reconstruction 
+% accuracy. In practice, the sparse slice data would come from physical measurements 
+% in an anechoic chamber.
+%% Background
+% OTA characterization of 5G mmWave phased arrays in anechoic chambers is time-consuming 
+% and expensive. A full 3-D pattern measurement at 1-degree resolution requires 
+% over 65,000 sample points. By contrast, capturing two elevation cuts and one 
+% azimuthal cut at 2-degree resolution yields approximately 540 samples — a 120x 
+% reduction in measurement time.
+% 
+% The |patternFromAI| function uses a pretrained deep learning model to reconstruct 
+% a plausible 3-D pattern from such sparse observations. The model has been trained 
+% on a diverse corpus of antenna and array patterns from the Antenna Toolbox catalog 
+% and has learned the general structure of physical radiation patterns on the 
+% sphere.
+% 
+% This example evaluates reconstruction accuracy for the following scenarios:
+%% 
+% # A single patch element (simpler pattern structure)
+% # A uniform array (narrower beams, sidelobe structure)
+% # An array pattern estimated via pattern multiplication from the reconstructed 
+% element
+% # A beamsteered array (asymmetric main beam, off-broadside peak)
+%% Overview of Measurement Data
+% The example uses three data sets generated from full-wave simulation of a 
+% 28 GHz patch element, a 4x4 rectangular array with uniform excitation, and a 
+% beamsteered variant of the same array. Each data set contains the full 3-D directivity 
+% pattern on a 1-degree grid (360 azimuth by 181 elevation points) and sparse 
+% measurement slices sampled at 2-degree resolution. The baseline configuration 
+% consists of two elevation cuts at azimuth 0 degrees and 90 degrees, respectively, 
+% and one azimuthal cut at elevation 0 degrees (i.e. the horizon). The steered 
+% case includes an additional targeted elevation cut through the steering direction. 
+% Note that each elevation cut traces a full 360-degree path through both poles 
+% by extending the elevation angle beyond the conventional $\pm$90-degree range. 
+% These sparse slices represent the limited data acquired in a practical OTA chamber 
+% measurement, where full 3-D pattern sweeps can be prohibitively time-consuming. 
+% Refer to the companion script |generate28GHzPatchArrayPatternData.m| for details.
+%% Load and Visualize Element Measurement Data
+% Load the measurement data for a 28 GHz microstrip patch element.
+
+elemData = load("patchElement_28GHz_patternData.mat");
+disp(elemData.description)
+%% 
+% Visualize the element measurement slices.
+
+figure
+polarpattern(elemData.elcut1.el,elemData.elcut1.data,TitleTop="Element — Elevation Cut (az = 0 deg)")
+figure
+polarpattern(elemData.elcut2.el,elemData.elcut2.data,TitleTop="Element — Elevation Cut (az = 90 deg)")
+figure
+polarpattern(elemData.azcut.az,elemData.azcut.data,TitleTop="Element — Azimuthal Cut (el = 0 deg)")
+%% Reconstruct Element 3-D Pattern from Sparse Measurements
+% Assemble the sparse measurement samples into the vectors required by |patternFromAI|: 
+% directivity values in dBi, azimuth angles, and elevation angles. Each sample 
+% is a triplet (magnitude, azimuth, elevation). The extended elevation convention 
+% (beyond $\pm$90 degrees) is accepted directly.
+
+elemSparseData = [elemData.elcut1.data,elemData.elcut2.data,elemData.azcut.data];
+elemSparseAz = [elemData.elcut1.az*ones(size(elemData.elcut1.el)), ...
+    elemData.elcut2.az*ones(size(elemData.elcut2.el)),elemData.azcut.az];
+elemSparseEl = [elemData.elcut1.el,elemData.elcut2.el,zeros(size(elemData.azcut.az))];
+nSparse = numel(elemSparseData);
+nFull = 360*181;
+disp("Sparse samples: " + nSparse + " (from " + nFull + "-point grid)")
+disp("Compression: " + round(nFull/nSparse) + "x")
+%% 
+% Reconstruct the full 3-D pattern from the sparse samples.
+
+[elemRecon,elOut,azOut] = patternFromAI(elemSparseData, ...
+    elemSparseAz,elemSparseEl,AngleConvention="az-el");
+%% Visualize Reconstructed and Reference Element Patterns
+% Import the reconstructed pattern into a |measuredAntenna| object using the 
+% |helperMeasuredAntennaFromDirectivity| local function. This readily facilitates 
+% both 3-D visualization here and pattern multiplication later.
+
+azVec = double(azOut);
+elVec = double(elOut);
+[azGrid,elGrid] = meshgrid(azVec,elVec);
+azGrid = azGrid.';
+elGrid = elGrid.';
+dirMat = [azGrid(:),elGrid(:),ones(numel(azGrid),1)];
+mElemRecon = helperMeasuredAntennaFromDirectivity(elemRecon(:),dirMat,elemData.freq,azVec,elVec);
+%% 
+% Visualize the reconstructed pattern. Set the magnitude scale to a 40 dB dynamic 
+% range below the reference peak to subsequently enable direct visual comparison 
+% with the reference pattern.
+
+elemPeakRef = max(elemData.p3D(:));
+pOptsElem = PatternPlotOptions(MagnitudeScale=[elemPeakRef-40,elemPeakRef]);
+figure
+pattern(mElemRecon,elemData.freq,azVec,elVec,PatternOptions=pOptsElem)
+title("Element Pattern — AI Reconstruction")
+%% 
+% Compare against the reference pattern.
+
+mElemRef = helperMeasuredAntennaFromDirectivity(elemData.p3D(:),dirMat,elemData.freq,azVec,elVec);
+figure
+pattern(mElemRef,elemData.freq,azVec,elVec,PatternOptions=pOptsElem)
+title("Element Pattern — Reference")
+%% Evaluate Element Reconstruction Accuracy
+% Calculate the root-mean-squared error (RMSE) and mean absolute error (MAE) 
+% over the full 3-D pattern to quantify overall reconstruction accuracy.
+
+elemAbsErr = abs(elemRecon - elemData.p3D);
+elemRMSE = sqrt(mean(elemAbsErr.^2,"all"));
+elemMAE = mean(elemAbsErr,"all");
+disp("Element RMSE: " + round(elemRMSE,2) + " dB")
+disp("Element MAE:  " + round(elemMAE,2) + " dB")
+%% 
+% Visualize the spatial error distribution.
+
+figure
+tiledlayout(1,3)
+nexttile
+helperPatternCustomRectangular(elemRecon,90-elVec,azVec, ...
+    Title="AI Reconstruction",MagnitudeScale=[elemPeakRef-40 elemPeakRef])
+nexttile
+helperPatternCustomRectangular(elemData.p3D,90-elVec,azVec, ...
+    Title="Reference",MagnitudeScale=[elemPeakRef-40 elemPeakRef])
+nexttile
+helperPatternCustomRectangular(elemAbsErr,90-elVec,azVec, ...
+    Title="Absolute Error (dB)")
+%% Load and Visualize Array Measurement Data
+% Load the measurement data for a 4x4 uniform rectangular array at 28 GHz with 
+% 0.7$\lambda$ element spacing. The array pattern has narrower beams and more 
+% sidelobe structure than the element.
+
+arrData = load("patchArray4x4_28GHz_uniformPatternData.mat");
+disp(arrData.description)
+%% 
+% Visualize the array measurement slices.
+
+figure
+polarpattern(arrData.elcut1.el,arrData.elcut1.data,TitleTop="Array — Elevation Cut (az = 0 deg)")
+figure
+polarpattern(arrData.elcut2.el,arrData.elcut2.data,TitleTop="Array — Elevation Cut (az = 90 deg)")
+figure
+polarpattern(arrData.azcut.az,arrData.azcut.data,TitleTop="Array — Azimuthal Cut (el = 0 deg)")
+%% Reconstruct Array 3-D Pattern from Sparse Measurements
+% Assemble the sparse measurements and reconstruct the array pattern.
+
+arrSparseData = [arrData.elcut1.data,arrData.elcut2.data,arrData.azcut.data];
+arrSparseAz = [arrData.elcut1.az*ones(size(arrData.elcut1.el)), ...
+    arrData.elcut2.az*ones(size(arrData.elcut2.el)),arrData.azcut.az];
+arrSparseEl = [arrData.elcut1.el,arrData.elcut2.el,zeros(size(arrData.azcut.az))];
+[arrRecon,~,~] = patternFromAI(arrSparseData, ...
+    arrSparseAz,arrSparseEl,AngleConvention="az-el");
+%% Visualize Reconstructed and Reference Array Patterns
+% Import the reconstructed pattern into a |measuredAntenna| object.
+
+mArrRecon = helperMeasuredAntennaFromDirectivity(arrRecon(:),dirMat,arrData.freq,azVec,elVec);
+%% 
+% Visualize the reconstructed array pattern. Set the magnitude scale to a 40 
+% dB dynamic range below the reference peak, which captures the main beam, sidelobes, 
+% and the upper portion of the null structure while suppressing noise-floor clutter.
+
+arrPeakRef = max(arrData.p3D(:));
+pOpts = PatternPlotOptions(MagnitudeScale=[arrPeakRef-40,arrPeakRef]);
+figure
+pattern(mArrRecon,arrData.freq,azVec,elVec,PatternOptions=pOpts)
+title("Array Pattern — AI Reconstruction")
+%% 
+% Compare against the reference pattern.
+
+mArrRef = helperMeasuredAntennaFromDirectivity(arrData.p3D(:),dirMat,arrData.freq,azVec,elVec);
+figure
+pattern(mArrRef,arrData.freq,azVec,elVec,PatternOptions=pOpts)
+title("Array Pattern — Reference")
+%% Evaluate Array Reconstruction Accuracy
+% Compute the reconstruction error.
+
+arrAbsErr = abs(arrRecon - arrData.p3D);
+arrRMSE = sqrt(mean(arrAbsErr.^2,"all"));
+arrMAE = mean(arrAbsErr,"all");
+disp("Array RMSE: " + round(arrRMSE,2) + " dB")
+disp("Array MAE:  " + round(arrMAE,2) + " dB")
+%% 
+% Visualize the spatial error distribution.
+
+figure
+tiledlayout(1,3)
+nexttile
+helperPatternCustomRectangular(arrRecon,90-elVec,azVec, ...
+    Title="AI Reconstruction",MagnitudeScale=[arrPeakRef-40 arrPeakRef])
+nexttile
+helperPatternCustomRectangular(arrData.p3D,90-elVec,azVec, ...
+    Title="Reference",MagnitudeScale=[arrPeakRef-40 arrPeakRef])
+nexttile
+helperPatternCustomRectangular(arrAbsErr,90-elVec,azVec, ...
+    Title="Absolute Error (dB)")
+%% Compare Element and Array Reconstruction Error Distribution
+% Compare element and array reconstruction accuracy on the same axes using the 
+% cumulative distribution of absolute error. This directly shows the fraction 
+% of angular coordinates that fall below a given error threshold.
+
+elemErrSorted = sort(elemAbsErr(:));
+arrErrSorted = sort(arrAbsErr(:));
+nPts = numel(elemErrSorted);
+cdfPct = (1:nPts).'/nPts*100;
+figure
+hElem = stairs(elemErrSorted,cdfPct,DisplayName="Element");
+hold on
+hArr = stairs(arrErrSorted,cdfPct,DisplayName="Array (uniform)");
+hold off
+idx3dB_elem = find(elemErrSorted<=3,1,"last");
+idx3dB_arr = find(arrErrSorted<=3,1,"last");
+datatip(hElem,DataIndex=idx3dB_elem,Location="southeast");
+datatip(hArr,DataIndex=idx3dB_arr,Location="southeast");
+xlabel("Absolute Error (dB)")
+ylabel("Percentage of Angular Coordinates")
+title("Cumulative Distribution of Reconstruction Error")
+legend(Location="southeast")
+grid on
+%% 
+% The datatips mark the 3 dB error threshold: 96% of angular coordinates have 
+% less than 3 dB error for the element, and 69% for the array. The element pattern, 
+% with its broad smooth structure, is substantially easier to reconstruct than 
+% the array pattern, whose narrow beams and deep nulls are more challenging for 
+% the model to recover from sparse observations.
+%% Estimate Array Pattern Using Pattern Multiplication
+% Pattern multiplication decomposes the array pattern into the product of the 
+% element pattern and the array factor. If the element pattern can be reconstructed 
+% from sparse measurements, the full array pattern can be obtained by applying 
+% the known array geometry — without measuring the array at all.
+% 
+% The reconstructed element |measuredAntenna| created earlier includes an E-field 
+% derived from directivity assuming linear polarization and zero phase. These 
+% assumptions are reasonable for a linearly polarized patch element and enable 
+% |patternMultiply| to compute the array factor coherently.
+%% 
+% Construct a |rectangularArray| using the reconstructed element and the known 
+% array geometry, then call |patternMultiply| to estimate the array pattern.
+
+arrFromRecon = rectangularArray(Element=mElemRecon,Size=[4 4], ...
+    RowSpacing=arrData.spacing,ColumnSpacing=arrData.spacing);
+[arrPM,~,~] = patternMultiply(arrFromRecon,arrData.freq,azVec,elVec);
+%% 
+% Visualize the pattern multiplication result.
+
+arrPM = arrPM.';
+mArrPM = helperMeasuredAntennaFromDirectivity(arrPM(:),dirMat,arrData.freq,azVec,elVec);
+figure
+pattern(mArrPM,arrData.freq,azVec,elVec,PatternOptions=pOpts)
+title("Array Pattern — Pattern Multiplication")
+%% 
+% Compute the estimation error and compare to the AI reconstruction. Pattern 
+% multiplication applies exact superposition, so it predicts beam shape and peak 
+% directivity accurately. Its errors concentrate in deep null regions and in the 
+% back hemisphere, where mutual coupling, finite-array truncation effects, and 
+% ground plane diffraction cause the embedded element pattern to deviate from 
+% the isolated-element assumption.
+
+arrPMErr = abs(arrPM - arrData.p3D);
+arrPMRMSE = sqrt(mean(arrPMErr.^2,"all"));
+arrPMMAE = mean(arrPMErr,"all");
+disp("Pattern multiplication RMSE (full sphere): " + round(arrPMRMSE,2) + " dB")
+disp("Pattern multiplication MAE (full sphere):  " + round(arrPMMAE,2) + " dB")
+%% 
+% Evaluate the accuracy within the main beam and sidelobe region, defined as 
+% within 10 dB of the peak, where pattern multiplication excels.
+
+mainBeamMask = arrData.p3D >= (arrPeakRef - 10);
+disp("Within 10 dB of peak:")
+disp("  AI reconstruction MAE:       " + round(mean(arrAbsErr(mainBeamMask)),2) + " dB")
+disp("  Pattern multiplication MAE:  " + round(mean(arrPMErr(mainBeamMask)),2) + " dB")
+%% 
+% The two approaches have complementary strengths. Pattern multiplication excels 
+% in the main beam region because it applies physics-based superposition exactly, 
+% while direct AI reconstruction captures mutual coupling effects that pattern 
+% multiplication ignores, yielding lower overall RMSE.
+%% Reconstruct Beamsteered Array Pattern Directly from Sparse Measurements
+% In 5G NR beam management, the array is steered to different directions using 
+% phase tapering. Load the measurement data for the array steered to azimuth 30 
+% degrees, elevation 60 degrees.
+
+arrSteeredData = load("patchArray4x4_28GHz_steeredPatternData.mat");
+disp(arrSteeredData.description)
+%% 
+% Attempt reconstruction using the two standard elevation cuts plus one azimuthal 
+% cut. Note that none of these cuts pass through the steered beam peak.
+
+steeredSparseData = [arrSteeredData.elcut1.data,arrSteeredData.elcut2.data,arrSteeredData.azcut.data];
+steeredSparseAz = [arrSteeredData.elcut1.az*ones(size(arrSteeredData.elcut1.el)), ...
+    arrSteeredData.elcut2.az*ones(size(arrSteeredData.elcut2.el)),arrSteeredData.azcut.az];
+steeredSparseEl = [arrSteeredData.elcut1.el,arrSteeredData.elcut2.el,zeros(size(arrSteeredData.azcut.az))];
+[steeredRecon,~,~] = patternFromAI(steeredSparseData, ...
+    steeredSparseAz,steeredSparseEl,AngleConvention="az-el");
+%% 
+% Visualize the reconstruction from standard cuts.
+
+steeredPeak = max(arrSteeredData.p3D(:));
+pOptsSteered = PatternPlotOptions(MagnitudeScale=[steeredPeak-40,steeredPeak]);
+mSteered = helperMeasuredAntennaFromDirectivity(steeredRecon(:),dirMat,arrData.freq,azVec,elVec);
+figure
+pattern(mSteered,arrData.freq,azVec,elVec,PatternOptions=pOptsSteered)
+title("Steered Array — AI, Two Elevation Cuts")
+%% 
+% Compare against the reference pattern.
+
+mSteeredRef = helperMeasuredAntennaFromDirectivity(arrSteeredData.p3D(:),dirMat,arrData.freq,azVec,elVec);
+figure
+pattern(mSteeredRef,arrData.freq,azVec,elVec,PatternOptions=pOptsSteered)
+title("Steered Array — Reference")
+%% 
+% Compute the reconstruction error.
+
+steeredAbsErr = abs(steeredRecon - arrSteeredData.p3D);
+steeredRMSE = sqrt(mean(steeredAbsErr.^2,"all"));
+disp("Steered (two elevation cuts + one azimuthal cut):")
+disp("  RMSE: " + round(steeredRMSE,2) + " dB")
+disp("  Reconstructed peak: " + round(max(steeredRecon(:)),1) + " dBi")
+disp("  Actual peak: " + round(max(arrSteeredData.p3D(:)),1) + " dBi")
+%% 
+% The reconstruction clearly underestimates the main beam. The standard cuts 
+% do not pass through the steered beam peak, so the maximum observed directivity 
+% in the sparse data is much lower than the actual peak. The model cannot recover 
+% amplitude information absent from the input.
+%% Improve Reconstruction with Additional Targeted Measurement Cut
+% Add a third elevation cut at azimuth 30 degrees, which passes directly through 
+% the steered beam. When the beam is steered off-broadside, standard principal-plane 
+% cuts may miss the main lobe entirely, so this targeted cut provides the model 
+% with amplitude information near the peak. It also demonstrates the flexibility 
+% of |patternFromAI| — measurements need not be restricted to principal planes.
+
+steeredSparseDataExtraCut = [steeredSparseData,arrSteeredData.elcut3.data];
+steeredSparseAzExtraCut = [steeredSparseAz,arrSteeredData.elcut3.az*ones(size(arrSteeredData.elcut3.el))];
+steeredSparseElExtraCut = [steeredSparseEl,arrSteeredData.elcut3.el];
+disp("Samples: two elevation + one azimuthal = " + numel(steeredSparseData) + ...
+    ", three elevation + one azimuthal = " + numel(steeredSparseDataExtraCut))
+[steeredReconExtraCut,~,~] = patternFromAI(steeredSparseDataExtraCut, ...
+    steeredSparseAzExtraCut,steeredSparseElExtraCut,AngleConvention="az-el");
+%% 
+% Visualize the improved reconstruction.
+
+mSteeredExtraCut = helperMeasuredAntennaFromDirectivity(steeredReconExtraCut(:),dirMat,arrData.freq,azVec,elVec);
+figure
+pattern(mSteeredExtraCut,arrData.freq,azVec,elVec,PatternOptions=pOptsSteered)
+title("Steered Array — AI, Three Elevation Cuts")
+%% 
+% Evaluate the improvement in reconstruction accuracy.
+
+steeredAbsErrExtraCut = abs(steeredReconExtraCut - arrSteeredData.p3D);
+steeredRMSEExtraCut = sqrt(mean(steeredAbsErrExtraCut.^2,"all"));
+disp("Steered (three elevation cuts + one azimuthal cut):")
+disp("  RMSE: " + round(steeredRMSEExtraCut,2) + " dB")
+disp("  Reconstructed peak: " + round(max(steeredReconExtraCut(:)),1) + " dBi")
+disp("  Actual peak: " + round(max(arrSteeredData.p3D(:)),1) + " dBi")
+%% Estimate Beamsteered Array Pattern Using Pattern Multiplication
+% As an alternative approach, use the reconstructed element pattern with pattern 
+% multiplication. This offers a measurement-free path to steered beam characterization 
+% — apply the known steering phase shifts to the reconstructed element to obtain 
+% the full steered pattern without any steered-array measurements.
+%% 
+% Construct the steered array as before for the uniform array, but now specify 
+% |PhaseShift| to apply the beam steering.
+
+arrSteeredFromRecon = rectangularArray(Element=mElemRecon,Size=[4 4], ...
+    RowSpacing=arrData.spacing,ColumnSpacing=arrData.spacing, ...
+    PhaseShift=arrSteeredData.phaseShift);
+[steeredPM,~,~] = patternMultiply(arrSteeredFromRecon,arrData.freq,azVec,elVec);
+%% 
+% Visualize the steered pattern multiplication result.
+
+steeredPM = steeredPM.';
+mSteeredPM = helperMeasuredAntennaFromDirectivity(steeredPM(:),dirMat,arrData.freq,azVec,elVec);
+figure
+pattern(mSteeredPM,arrData.freq,azVec,elVec,PatternOptions=pOptsSteered)
+title("Steered Array — Pattern Multiplication")
+%% 
+% Compute the estimation error.
+
+steeredPMErr = abs(steeredPM - arrSteeredData.p3D);
+steeredPMRMSE = sqrt(mean(steeredPMErr.^2,"all"));
+disp("Steered pattern multiplication RMSE: " + round(steeredPMRMSE,2) + " dB")
+disp("Steered pattern multiplication peak: " + round(max(steeredPM(:)),1) + " dBi" + ...
+    " (actual: " + round(max(arrSteeredData.p3D(:)),1) + " dBi)")
+%% 
+% Pattern multiplication correctly predicts the steered beam peak and direction 
+% because it applies the known phase shifts analytically. It achieves this without 
+% any steered-array measurements — only the element pattern and array geometry 
+% are needed.
+%% Summary
+% Tabulate the reconstruction accuracy across all scenarios.
+
+scenarios = ["Element (two elevation + one azimuthal)"; ...
+             "Array, uniform (two elevation + one azimuthal)"; ...
+             "Array, pattern multiplication"; ...
+             "Array, steered (two elevation + one azimuthal)"; ...
+             "Array, steered (three elevation + one azimuthal)"; ...
+             "Array, steered pattern multiplication"];
+RMSE = [elemRMSE;arrRMSE;arrPMRMSE;steeredRMSE;steeredRMSEExtraCut;steeredPMRMSE];
+MAE = [elemMAE;arrMAE;arrPMMAE;mean(steeredAbsErr,"all"); ...
+       mean(steeredAbsErrExtraCut,"all");mean(steeredPMErr,"all")];
+summaryTable = table(scenarios,round(RMSE,2),round(MAE,2), ...
+    VariableNames=["Scenario","RMSE (dB)","MAE (dB)"])
+% Reconstruction Accuracy
+%% 
+% * The element pattern, with its smooth angular structure, is reconstructed 
+% most accurately (RMSE < 1.2 dB).
+% * Array patterns are more challenging due to narrower beams and sidelobe structure, 
+% but direct AI reconstruction still achieves useful accuracy (RMSE ~ 5 dB) and 
+% captures mutual coupling effects implicitly.
+% * All AI reconstructions complete in under a minute from sparse measurements, 
+% as compared to the expensive and time-consuming full 3-D measurement sweeps 
+% or full-wave simulations traditionally needed for complete pattern characterization.
+% AI Versus Pattern Multiplication
+%% 
+% * Pattern multiplication from the AI-reconstructed element is more accurate 
+% than direct AI reconstruction in the main beam region, because it applies exact 
+% superposition physics.
+% * Direct AI reconstruction of the full array captures mutual coupling and 
+% finite-array effects that pattern multiplication ignores, yielding better accuracy 
+% in null regions and the back hemisphere, and lower overall RMSE.
+% * The choice depends on the application: pattern multiplication is preferable 
+% when main-beam fidelity is the priority or when multiple beam states must be 
+% characterized from a single element measurement, while direct AI on the array 
+% is preferable when full-sphere accuracy matters.
+% Beamsteering and Measurement Strategy
+%% 
+% * For steered beams, the placement of the measurement cuts matters: including 
+% a cut through the beam direction improves peak recovery from 10.4 to 18.1 dBi 
+% (actual: 19.0 dBi).
+% * Pattern multiplication predicts the steered beam correctly without any steered-array 
+% measurements — only the element characterization plus known phase shifts are 
+% needed.
+%% Supporting Functions
+% The following sections define the local helper functions used in this example 
+% to import directivity data and customize pattern visualizations.
+% Create Measured Antenna from Directivity
+% The |helperMeasuredAntennaFromDirectivity| local function creates a |measuredAntenna| 
+% object from a directivity pattern in dBi. It derives a synthetic E-field as 
+% $E_\theta = \sqrt{D}$, assuming linear polarization and zero phase, to satisfy 
+% the E-field requirement of |measuredAntenna|, while storing the original directivity 
+% values for visualization via the |pattern| function.
+
+function mAnt = helperMeasuredAntennaFromDirectivity(D_dBi,dirMat,freq,azVec,elVec)
+    D_lin = 10.^(D_dBi/10);
+    E = zeros(numel(D_dBi),3);
+    E(:,2) = sqrt(abs(D_lin));
+    mAnt = measuredAntenna(E=E,Directivity=D_dBi, ...
+        Direction=dirMat,FieldFrequency=freq, ...
+        FieldCoordinate="polar",Azimuth=azVec(:),Elevation=elVec(:));
+end
+% Plot 3-D Pattern in Rectangular Coordinate System and Customize Axes
+% The |helperPatternCustomRectangular| local function plots the angular distribution 
+% of the input quantity, such as directivity pattern or absolute error, in the 
+% rectangular coordinate system and configures some of the axes properties for 
+% display purposes.
+
+function helperPatternCustomRectangular(data,theta,phi,options)
+    arguments
+        data
+        theta
+        phi
+        options.Title = ""
+        options.MagnitudeScale = []
+    end
+    patternCustom(data,theta,phi,CoordinateSystem="rectangular")
+    if ~isempty(options.MagnitudeScale)
+        clim(options.MagnitudeScale)
+    end
+    if options.Title ~= ""
+        title(options.Title)
+    end
+    view(2)
+    colorbar
+    xlim([-1 180])
+    xticks(0:90:180)
+    xtickangle(0)
+    ylim([0 360])
+    yticks(0:90:360)
+    ytickangle(0)
+    box on
+end
+%% References
+% [1] P. J. DiMeo, S. Sivaramakrishnan, and V. Iyer, "AI-Based 3D Antenna Pattern 
+% Reconstruction," _2024 IEEE International Symposium on Antennas and Propagation 
+% and INC/USNC-URSI Radio Science Meeting (AP-S/INC-USNC-URSI)_, Firenze, Italy, 
+% 2024, pp. 1-2, doi: <https://doi.org/10.1109/AP-S/INC-USNC-URSI52054.2024.10686954 
+% 10.1109/AP-S/INC-USNC-URSI52054.2024.10686954>.
+% 
+% [2] F. Dourado, G. Zucchelli, and S. Sivaramakrishnan, "Revolutionize Your 
+% Phased Array Testing: Fast Antenna Pattern Measurements, Analysis, and AI-Based 
+% 3D Pattern Reconstruction," Workshop IWTu2, _2026 IEEE International Microwave 
+% Symposium (IMS)_, Boston, MA, June 2026.
+% 
+% [3] V. Iyer, S. Sekharan, P. DiMeo, and S. Sivaramakrishnan, "AI in Antenna 
+% Design and Analysis: From Pretrained Models to System-Level Integration," Workshop 
+% HD-7, _2026 IEEE International Symposium on Antennas and Propagation and USNC-URSI 
+% Radio Science Meeting (AP-S/URSI)_, Detroit, MI, July 2026.
+%% 
+% _AP-S/URSI 2026 Technical Workshop — HD-7: AI in Antenna Design and Analysis: 
+% From Pretrained Models to System-Level Integration_
+% 
+% _Copyright 2026 The MathWorks, Inc._
+##### SOURCE END #####
+-->
+</div></body></html>

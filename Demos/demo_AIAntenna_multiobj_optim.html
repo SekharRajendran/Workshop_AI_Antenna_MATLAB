@@ -1,0 +1,260 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge,IE=9,chrome=1"><meta name="generator" content="MATLAB 2026b"><title>Multiobjective Optimization with Pretrained AIAntenna Models</title><style type="text/css">.rtcContent { padding: 30px; } .S0 { margin: 10px 10px 5px 26px; padding: 0px; line-height: 28.8px; min-height: 0px; white-space: pre; color: rgb(192, 76, 11); font-family: Helvetica, Arial, sans-serif, Helvetica, Arial, sans-serif; font-style: normal; font-size: 24px; font-weight: 400; text-align: left;  }
+._richTextNode {white-space: break-spaces;}
+.S1 { margin: 2px 10px 9px 26px; padding: 0px; line-height: 21px; min-height: 0px; white-space: pre; color: rgb(33, 33, 33); font-family: Helvetica, Arial, sans-serif, Helvetica, Arial, sans-serif; font-style: normal; font-size: 14px; font-weight: 400; text-align: left;  }
+.S2 { margin: 10px 10px 5px 26px; padding: 0px; line-height: 25px; min-height: 0px; white-space: pre; color: rgb(33, 33, 33); font-family: Helvetica, Arial, sans-serif, Helvetica, Arial, sans-serif; font-style: normal; font-size: 20px; font-weight: 700; text-align: left;  }
+.CodeBlock { background-color: #F5F5F5; margin: 10px 0 10px 0; }
+.S3 { border-left: 0px none rgb(33, 33, 33); border-right: 0px none rgb(33, 33, 33); border-top: 0px none rgb(33, 33, 33); border-bottom: 0px none rgb(33, 33, 33); border-radius: 0px; padding: 0px 45px 0px 21px; line-height: 18.004px; min-height: 0px; white-space: nowrap; color: rgb(33, 33, 33); font-family: Menlo, Monaco, Consolas, "Courier New", monospace, Menlo, Monaco, Consolas, "Courier New", monospace; font-size: 14px; text-indent: 0px;  }
+.S4 { margin: 10px 10px 5px 26px; padding: 0px; line-height: 20.4px; min-height: 0px; white-space: pre; color: rgb(33, 33, 33); font-family: Helvetica, Arial, sans-serif, Helvetica, Arial, sans-serif; font-style: normal; font-size: 17px; font-weight: 700; text-align: left;  }</style></head><body><div class = rtcContent><h1  class = 'S0'><span class="_richTextNode">Multiobjective Optimization with Pretrained AIAntenna Models</span></h1><div  class = 'S1'><span class="_richTextNode">This demo optimizes a 5.9 GHz patch microstrip antenna on a Teflon substrate for competing objectives — bandwidth and gain — using a pretrained artificial intelligence (AI) surrogate. The scenario is a vehicle-to-infrastructure (V2I) roadside unit for the 5.9 GHz vehicle-to-everything (V2X) band. The link budget demands maximum gain for highway-distance coverage, while wider bandwidth provides margin for manufacturing tolerances and multi-channel operation. The Teflon substrate provides thermal stability in an outdoor enclosure.</span></div><div  class = 'S1'><span class="_richTextNode">Bandwidth and gain compete in a patch antenna: the geometric parameters that maximize one do not simultaneously maximize the other, particularly under a resonance constraint. Mapping this trade-off with full-wave electromagnetic (EM) simulation could take days — each evaluation requires several minutes, and the optimizer needs hundreds. An AI surrogate evaluates in a fraction of a second, making the full multiobjective optimization (Pareto front) exploration practical.</span></div><h2  class = 'S2'><span class="_richTextNode">Design the AI Antenna</span></h2><div  class = 'S1'><span class="_richTextNode">Create the baseline design at 5.9 GHz. The </span><span class="_richTextNode" style=' font-family: monospace;'>ForAI=true</span><span class="_richTextNode"> flag returns an </span><span class="_richTextNode" style=' font-family: monospace;'>AIAntenna</span><span class="_richTextNode"> object backed by pretrained AI models instead of running full-wave simulation.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant = design(patchMicrostrip(Substrate=dielectric(</span><span style="color: rgb(167, 9, 245);">"Teflon"</span><span >)),5.9e9,ForAI=true);</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Visualize the geometry.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >show(aiant)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Evaluate the initial design point — this is the baseline before optimization.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >bw_AI0 = bandwidth(aiant)/1e6;</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >rad_AI0 = peakRadiation(aiant,5.9e9);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >disp(</span><span style="color: rgb(167, 9, 245);">"Initial design: BW = " </span><span >+ round(bw_AI0,1) + </span><span style="color: rgb(167, 9, 245);">" MHz, Gain = " </span><span >+ round(rad_AI0,2) + </span><span style="color: rgb(167, 9, 245);">" dBi"</span><span >)</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Inspect the tunable parameter ranges. The AI model is trained and accurate within these bounds.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >tr = tunableRanges(aiant)</span></span></div></div></div><h2  class = 'S2'><span class="_richTextNode">Set Up Multiobjective Optimization</span></h2><div  class = 'S1'><span class="_richTextNode">Define the optimization problem: maximize both bandwidth and peak radiation by varying Length, Width, and Height. SubstrateEpsilonR is fixed at the Teflon default — the material is a design choice, not a free variable. The bounds come from </span><span class="_richTextNode" style=' font-family: monospace;'>tunableRanges</span><span class="_richTextNode">, inset slightly to avoid boundary effects. A nonlinear constraint keeps the resonant frequency within ±2% of the operating frequency, ensuring all solutions on the Pareto front are actually usable at 5.9 GHz.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >f0 = 5.9e9;</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >lb = [0.0146, 0.0188, 0.000300];</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >ub = [0.0194, 0.0250, 0.000402];</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >objFcn = @(optimInput) multiObjFcnAI(aiant,f0,optimInput);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >constrFcn = @(optimInput) constraintFcnAI(aiant,f0,optimInput);</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Configure </span><span class="_richTextNode" style=' font-family: monospace;'>paretosearch</span><span class="_richTextNode"> — a direct-search multiobjective optimizer that requires no gradients and is well suited for bounded problems with inexpensive evaluations.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >opts = optimoptions(</span><span style="color: rgb(167, 9, 245);">"paretosearch"</span><span >,ParetoSetSize=20,Display=</span><span style="color: rgb(167, 9, 245);">"off"</span><span >);</span></span></div></div></div><h2  class = 'S2'><span class="_richTextNode">Run the Optimization</span></h2><div  class = 'S1'><span class="_richTextNode">Each AI evaluation completes in a fraction of a second, enabling the optimizer to map the full Pareto front in under a minute.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >rng </span><span style="color: rgb(167, 9, 245);">default</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >tic</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >[X,F] = paretosearch(objFcn,3,[],[],[],[],lb,ub,constrFcn,opts);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >toc</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >BW = -F(:,1)/1e6;</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >Gain = -F(:,2);</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">The optimizer ran ~500 function evaluations. Each one calls </span><span class="_richTextNode" style=' font-family: monospace;'>bandwidth</span><span class="_richTextNode"> and </span><span class="_richTextNode" style=' font-family: monospace;'>peakRadiation</span><span class="_richTextNode"> for the objectives, plus </span><span class="_richTextNode" style=' font-family: monospace;'>resonantFrequency</span><span class="_richTextNode"> for the constraint. With full-wave EM simulation, each evaluation could require a frequency sweep (~3 minutes) plus a full-sphere far-field computation (~3 minutes), driving the total computational cost to the order of days.</span></div><h2  class = 'S2'><span class="_richTextNode">Visualize the Pareto Front</span></h2><div  class = 'S1'><span class="_richTextNode">The trade-off curve shows the noninferior points — solutions for which neither objective can be improved without worsening the other. Overlaying the initial </span><span class="_richTextNode" style=' font-family: monospace;'>design</span><span class="_richTextNode"> point shows how the optimizer improved on the baseline.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >figure</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >scatter(BW,Gain,50,</span><span style="color: rgb(167, 9, 245);">"filled"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >hold </span><span style="color: rgb(167, 9, 245);">on</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >plot(bw_AI0,rad_AI0,</span><span style="color: rgb(167, 9, 245);">"rx"</span><span >,MarkerSize=12,LineWidth=2)</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >xline(bw_AI0,</span><span style="color: rgb(167, 9, 245);">":"</span><span >,</span><span style="color: rgb(167, 9, 245);">"Color"</span><span >,[0.7 0 0])</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >yline(rad_AI0,</span><span style="color: rgb(167, 9, 245);">":"</span><span >,</span><span style="color: rgb(167, 9, 245);">"Color"</span><span >,[0.7 0 0])</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >hold </span><span style="color: rgb(167, 9, 245);">off</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >xlabel(</span><span style="color: rgb(167, 9, 245);">"Bandwidth (MHz)"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >ylabel(</span><span style="color: rgb(167, 9, 245);">"Peak Radiation (dBi)"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >title(</span><span style="color: rgb(167, 9, 245);">"Bandwidth vs. Gain Trade-off (V2X Patch on Teflon)"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >legend([</span><span style="color: rgb(167, 9, 245);">"Noninferior points"</span><span >,</span><span style="color: rgb(167, 9, 245);">"Initial design"</span><span >],Location=</span><span style="color: rgb(167, 9, 245);">"best"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >grid </span><span style="color: rgb(167, 9, 245);">on</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Select three representative solutions: maximum bandwidth, maximum gain, and a balanced compromise. The balanced point is chosen as the one nearest the utopia point (simultaneously maximum bandwidth and maximum gain) in normalized objective space.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >[~,idxMaxBW] = max(BW);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >[~,idxMaxGain] = max(Gain);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >dist = vecnorm([BW - max(BW), Gain - max(Gain)]./[range(BW), range(Gain)], 2, 2);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >[~,idxBal] = min(dist);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >hold </span><span style="color: rgb(167, 9, 245);">on</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >scatter(BW([idxMaxBW,idxMaxGain,idxBal]),Gain([idxMaxBW,idxMaxGain,idxBal]),120,</span><span style="color: rgb(167, 9, 245);">"r"</span><span >,</span><span style="color: rgb(167, 9, 245);">"filled"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >legend([</span><span style="color: rgb(167, 9, 245);">"Noninferior points"</span><span >,</span><span style="color: rgb(167, 9, 245);">"Initial design"</span><span >,</span><span style="color: rgb(167, 9, 245);">"Selected"</span><span >],Location=</span><span style="color: rgb(167, 9, 245);">"best"</span><span >)</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >hold </span><span style="color: rgb(167, 9, 245);">off</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">Inspect the selected designs.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >selectedDesigns = array2table([ </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >    X(idxMaxBW,:)*1e3, BW(idxMaxBW), Gain(idxMaxBW); </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >    X(idxMaxGain,:)*1e3, BW(idxMaxGain), Gain(idxMaxGain); </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >    X(idxBal,:)*1e3, BW(idxBal), Gain(idxBal)], </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >    VariableNames=[</span><span style="color: rgb(167, 9, 245);">"Length (mm)"</span><span >,</span><span style="color: rgb(167, 9, 245);">"Width (mm)"</span><span >,</span><span style="color: rgb(167, 9, 245);">"Height (mm)"</span><span >,</span><span style="color: rgb(167, 9, 245);">"BW (MHz)"</span><span >,</span><span style="color: rgb(167, 9, 245);">"Gain (dBi)"</span><span >], </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >    RowNames=[</span><span style="color: rgb(167, 9, 245);">"Max BW"</span><span >,</span><span style="color: rgb(167, 9, 245);">"Max Gain"</span><span >,</span><span style="color: rgb(167, 9, 245);">"Balanced"</span><span >])</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode">The frequency constraint keeps all solutions on-band, which limits the extremes the optimizer can reach. The max-bandwidth solution achieves ~65 MHz — a significant improvement over the 51 MHz baseline. The max-gain solution approaches 8 dBi with narrower bandwidth. The balanced solution improves both objectives over the initial design while staying well within the V2X band.</span></div><h2  class = 'S2'><span class="_richTextNode">Far-Field Visualization (R2026b)</span></h2><div  class = 'S1'><span class="_richTextNode">As of R2026b, calling </span><span class="_richTextNode" style=' font-family: monospace;'>beamwidth</span><span class="_richTextNode"> or </span><span class="_richTextNode" style=' font-family: monospace;'>peakRadiation</span><span class="_richTextNode"> without output arguments produces a far-field visualization plot, enabling direct visual comparison of the radiation shape across candidate designs without additional plotting code.</span></div><h3  class = 'S4'><span class="_richTextNode">Max-Bandwidth Solution</span></h3><div  class = 'S1'><span class="_richTextNode">This solution achieves the broadest passband at the cost of reduced directivity.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Length = X(idxMaxBW,1);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Width = X(idxMaxBW,2);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Height = X(idxMaxBW,3);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >peakRadiation(aiant,f0)</span></span></div></div></div><h3  class = 'S4'><span class="_richTextNode">Max-Gain Solution</span></h3><div  class = 'S1'><span class="_richTextNode">This solution achieves the highest directivity at the cost of reduced bandwidth.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Length = X(idxMaxGain,1);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Width = X(idxMaxGain,2);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Height = X(idxMaxGain,3);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >peakRadiation(aiant,f0)</span></span></div></div></div><h3  class = 'S4'><span class="_richTextNode">Balanced Solution</span></h3><div  class = 'S1'><span class="_richTextNode">This solution offers a practical compromise, improving both bandwidth and gain over the initial design while staying on-frequency.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Length = X(idxBal,1);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Width = X(idxBal,2);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Height = X(idxBal,3);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >peakRadiation(aiant,f0)</span></span></div></div></div><h2  class = 'S2'><span class="_richTextNode">Full-Wave Validation</span></h2><div  class = 'S1'><span class="_richTextNode">Before committing to fabrication, validate the chosen design with full-wave EM simulation. This is the recommended workflow: use AI for rapid design-space exploration, then confirm the finalist with rigorous simulation.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >validateChoice = </span><span style="color: rgb(167, 9, 245);">"Balanced"</span><span >;</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span style="color: rgb(14, 0, 255);">switch </span><span >validateChoice</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >    </span><span style="color: rgb(14, 0, 255);">case </span><span style="color: rgb(167, 9, 245);">"Max BW"</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >        idx = idxMaxBW;</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >    </span><span style="color: rgb(14, 0, 255);">case </span><span style="color: rgb(167, 9, 245);">"Max Gain"</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >        idx = idxMaxGain;</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >    </span><span style="color: rgb(14, 0, 255);">case </span><span style="color: rgb(167, 9, 245);">"Balanced"</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >        idx = idxBal;</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span style="color: rgb(14, 0, 255);">end</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Length = X(idx,1);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Width = X(idx,2);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Height = X(idx,3);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >pm = exportAntenna(aiant);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >freq = linspace(0.7,1.3,1001)*f0;</span></span></div></div></div><h3  class = 'S4'><span class="_richTextNode">Resonant Frequency</span></h3><div  class = 'S1'><span class="_richTextNode" style=' font-family: monospace;'>SweepOption="interp"</span><span class="_richTextNode"> fits a rational function to the S-parameters from a sparse set of EM solves, then evaluates at all 1001 frequency points — fine resolution at minimal additional cost.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >tic</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >fR_EM = resonantFrequency(pm,freq,SweepOption=</span><span style="color: rgb(167, 9, 245);">"interp"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >toc</span></span></div></div></div><h3  class = 'S4'><span class="_richTextNode">Bandwidth</span></h3><div  class = 'S1'><span class="_richTextNode">The bandwidth computation reuses the cached EM solutions from the resonant frequency sweep, so it returns almost instantly.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >tic</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >bw_EM = bandwidth(pm,freq,SweepOption=</span><span style="color: rgb(167, 9, 245);">"interp"</span><span >);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >toc</span></span></div></div></div><h3  class = 'S4'><span class="_richTextNode">Beamwidth</span></h3><div  class = 'S1'><span class="_richTextNode">Far-field quantities require evaluating the radiation integral at each observation angle — a separate computation from the port analysis. Compute beamwidth at 1-degree resolution in two elevation planes for the patch (az=0 and az=90).</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >tic</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >hpbw_el0_EM = beamwidth(pm,f0,0,0:360);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >toc</span></span></div></div></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >tic</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >hpbw_el90_EM = beamwidth(pm,f0,90,0:360);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >toc</span></span></div></div></div><h3  class = 'S4'><span class="_richTextNode">Peak Radiation</span></h3><div  class = 'S1'><span class="_richTextNode">Full-sphere scan at 1-degree resolution (361 azimuth x 181 elevation directions). This is the most expensive single computation — the cost the AI surrogate helped avoid 500 times during optimization.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >tic</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >rad_EM = peakRadiation(pm,f0,0:360,-90:90);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >toc</span></span></div></div></div><h2  class = 'S2'><span class="_richTextNode">Compare AI vs. Full-Wave</span></h2><div  class = 'S1'><span class="_richTextNode">Tabulate the AI surrogate predictions against full-wave EM results. The AI models are accurate enough to enable the optimizer to reliably explore the design space, with full-wave simulation providing the final confirmation before fabrication.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >fR_AI = resonantFrequency(aiant);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >bw_AI = bandwidth(aiant);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >hpbw_AI = beamwidth(aiant,f0);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >rad_AI = peakRadiation(aiant,f0);</span></span></div></div></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >table([fR_AI;bw_AI;hpbw_AI(1);hpbw_AI(2);rad_AI], </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >    [fR_EM(1);bw_EM;hpbw_el0_EM;hpbw_el90_EM;rad_EM], </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >    VariableNames=[</span><span style="color: rgb(167, 9, 245);">"AI"</span><span >,</span><span style="color: rgb(167, 9, 245);">"EM"</span><span >], </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >    RowNames=[</span><span style="color: rgb(167, 9, 245);">"Resonant Frequency"</span><span >,</span><span style="color: rgb(167, 9, 245);">"10-dB Bandwidth"</span><span >, </span><span style="color: rgb(14, 0, 255);">...</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >    </span><span style="color: rgb(167, 9, 245);">"3-dB Beamwidth (Plane 1)"</span><span >,</span><span style="color: rgb(167, 9, 245);">"3-dB Beamwidth (Plane 2)"</span><span >,</span><span style="color: rgb(167, 9, 245);">"Peak Radiation"</span><span >])</span></span></div></div></div><h2  class = 'S2'><span class="_richTextNode">Helper Function</span></h2><div  class = 'S1'><span class="_richTextNode">The </span><span class="_richTextNode" style=' font-family: monospace;'>multiObjFcnAI</span><span class="_richTextNode"> local function evaluates the two competing objectives for a given set of geometric parameters. It assigns the optimization variables to the AIAntenna object and returns the negated bandwidth and peak radiation (negated because </span><span class="_richTextNode" style=' font-family: monospace;'>paretosearch</span><span class="_richTextNode"> minimizes).</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span style="color: rgb(14, 0, 255);">function </span><span >y = multiObjFcnAI(aiant,f0,optimInput)</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Length = optimInput(1);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Width = optimInput(2);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Height = optimInput(3);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >bw = bandwidth(aiant);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >rad = peakRadiation(aiant,f0);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >y = [-bw, -rad];</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span style="color: rgb(14, 0, 255);">end</span></span></div></div></div><h2  class = 'S2'><span class="_richTextNode">Constraint Function</span></h2><div  class = 'S1'><span class="_richTextNode">The </span><span class="_richTextNode" style=' font-family: monospace;'>constraintFcnAI</span><span class="_richTextNode"> local function enforces that the resonant frequency stays within ±2% of the operating frequency. This prevents the optimizer from exploiting geometries that achieve high bandwidth or gain by shifting the resonance away from the target band.</span></div><div class="CodeBlock"><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span style="color: rgb(14, 0, 255);">function </span><span >[c,ceq] = constraintFcnAI(aiant,f0,optimInput)</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Length = optimInput(1);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Width = optimInput(2);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >aiant.Height = optimInput(3);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >fR = resonantFrequency(aiant);</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >c(1) = -fR + f0*0.98;</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >c(2) = fR - f0*1.02;</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span >ceq = [];</span></span></div></div><div class="inlineWrapper"><div  class = 'S3'><span style="white-space: pre"><span style="color: rgb(14, 0, 255);">end</span></span></div></div></div><div  class = 'S1'><span class="_richTextNode" style=' font-style: italic;'>AP-S/URSI 2026 Technical Workshop — HD-7: AI in Antenna Design and Analysis: From Pretrained Models to System-Level Integration</span></div><div  class = 'S1'><span class="_richTextNode" style=' font-style: italic;'>Copyright 2026 The MathWorks, Inc.</span></div>
+<br>
+<!-- 
+##### SOURCE BEGIN #####
+%% Multiobjective Optimization with Pretrained AIAntenna Models
+% This demo optimizes a 5.9 GHz patch microstrip antenna on a Teflon substrate 
+% for competing objectives — bandwidth and gain — using a pretrained artificial 
+% intelligence (AI) surrogate. The scenario is a vehicle-to-infrastructure (V2I) 
+% roadside unit for the 5.9 GHz vehicle-to-everything (V2X) band. The link budget 
+% demands maximum gain for highway-distance coverage, while wider bandwidth provides 
+% margin for manufacturing tolerances and multi-channel operation. The Teflon 
+% substrate provides thermal stability in an outdoor enclosure.
+% 
+% Bandwidth and gain compete in a patch antenna: the geometric parameters that 
+% maximize one do not simultaneously maximize the other, particularly under a 
+% resonance constraint. Mapping this trade-off with full-wave electromagnetic 
+% (EM) simulation could take days — each evaluation requires several minutes, 
+% and the optimizer needs hundreds. An AI surrogate evaluates in a fraction of 
+% a second, making the full multiobjective optimization (Pareto front) exploration 
+% practical.
+%% Design the AI Antenna
+% Create the baseline design at 5.9 GHz. The |ForAI=true| flag returns an |AIAntenna| 
+% object backed by pretrained AI models instead of running full-wave simulation.
+
+aiant = design(patchMicrostrip(Substrate=dielectric("Teflon")),5.9e9,ForAI=true);
+%% 
+% Visualize the geometry.
+
+show(aiant)
+%% 
+% Evaluate the initial design point — this is the baseline before optimization.
+
+bw_AI0 = bandwidth(aiant)/1e6;
+rad_AI0 = peakRadiation(aiant,5.9e9);
+disp("Initial design: BW = " + round(bw_AI0,1) + " MHz, Gain = " + round(rad_AI0,2) + " dBi")
+%% 
+% Inspect the tunable parameter ranges. The AI model is trained and accurate 
+% within these bounds.
+
+tr = tunableRanges(aiant)
+%% Set Up Multiobjective Optimization
+% Define the optimization problem: maximize both bandwidth and peak radiation 
+% by varying Length, Width, and Height. SubstrateEpsilonR is fixed at the Teflon 
+% default — the material is a design choice, not a free variable. The bounds come 
+% from |tunableRanges|, inset slightly to avoid boundary effects. A nonlinear 
+% constraint keeps the resonant frequency within ±2% of the operating frequency, 
+% ensuring all solutions on the Pareto front are actually usable at 5.9 GHz.
+
+f0 = 5.9e9;
+lb = [0.0146, 0.0188, 0.000300];
+ub = [0.0194, 0.0250, 0.000402];
+objFcn = @(optimInput) multiObjFcnAI(aiant,f0,optimInput);
+constrFcn = @(optimInput) constraintFcnAI(aiant,f0,optimInput);
+%% 
+% Configure |paretosearch| — a direct-search multiobjective optimizer that requires 
+% no gradients and is well suited for bounded problems with inexpensive evaluations.
+
+opts = optimoptions("paretosearch",ParetoSetSize=20,Display="off");
+%% Run the Optimization
+% Each AI evaluation completes in a fraction of a second, enabling the optimizer 
+% to map the full Pareto front in under a minute.
+
+rng default
+tic
+[X,F] = paretosearch(objFcn,3,[],[],[],[],lb,ub,constrFcn,opts);
+toc
+BW = -F(:,1)/1e6;
+Gain = -F(:,2);
+%% 
+% The optimizer ran ~500 function evaluations. Each one calls |bandwidth| and 
+% |peakRadiation| for the objectives, plus |resonantFrequency| for the constraint. 
+% With full-wave EM simulation, each evaluation could require a frequency sweep 
+% (~3 minutes) plus a full-sphere far-field computation (~3 minutes), driving 
+% the total computational cost to the order of days.
+%% Visualize the Pareto Front
+% The trade-off curve shows the noninferior points — solutions for which neither 
+% objective can be improved without worsening the other. Overlaying the initial 
+% |design| point shows how the optimizer improved on the baseline.
+
+figure
+scatter(BW,Gain,50,"filled")
+hold on
+plot(bw_AI0,rad_AI0,"rx",MarkerSize=12,LineWidth=2)
+xline(bw_AI0,":","Color",[0.7 0 0])
+yline(rad_AI0,":","Color",[0.7 0 0])
+hold off
+xlabel("Bandwidth (MHz)")
+ylabel("Peak Radiation (dBi)")
+title("Bandwidth vs. Gain Trade-off (V2X Patch on Teflon)")
+legend(["Noninferior points","Initial design"],Location="best")
+grid on
+%% 
+% Select three representative solutions: maximum bandwidth, maximum gain, and 
+% a balanced compromise. The balanced point is chosen as the one nearest the utopia 
+% point (simultaneously maximum bandwidth and maximum gain) in normalized objective 
+% space.
+
+[~,idxMaxBW] = max(BW);
+[~,idxMaxGain] = max(Gain);
+dist = vecnorm([BW - max(BW), Gain - max(Gain)]./[range(BW), range(Gain)], 2, 2);
+[~,idxBal] = min(dist);
+hold on
+scatter(BW([idxMaxBW,idxMaxGain,idxBal]),Gain([idxMaxBW,idxMaxGain,idxBal]),120,"r","filled")
+legend(["Noninferior points","Initial design","Selected"],Location="best")
+hold off
+%% 
+% Inspect the selected designs.
+
+selectedDesigns = array2table([ ...
+    X(idxMaxBW,:)*1e3, BW(idxMaxBW), Gain(idxMaxBW); ...
+    X(idxMaxGain,:)*1e3, BW(idxMaxGain), Gain(idxMaxGain); ...
+    X(idxBal,:)*1e3, BW(idxBal), Gain(idxBal)], ...
+    VariableNames=["Length (mm)","Width (mm)","Height (mm)","BW (MHz)","Gain (dBi)"], ...
+    RowNames=["Max BW","Max Gain","Balanced"])
+%% 
+% The frequency constraint keeps all solutions on-band, which limits the extremes 
+% the optimizer can reach. The max-bandwidth solution achieves ~65 MHz — a significant 
+% improvement over the 51 MHz baseline. The max-gain solution approaches 8 dBi 
+% with narrower bandwidth. The balanced solution improves both objectives over 
+% the initial design while staying well within the V2X band.
+%% Far-Field Visualization (R2026b)
+% As of R2026b, calling |beamwidth| or |peakRadiation| without output arguments 
+% produces a far-field visualization plot, enabling direct visual comparison of 
+% the radiation shape across candidate designs without additional plotting code.
+% Max-Bandwidth Solution
+% This solution achieves the broadest passband at the cost of reduced directivity.
+
+aiant.Length = X(idxMaxBW,1);
+aiant.Width = X(idxMaxBW,2);
+aiant.Height = X(idxMaxBW,3);
+peakRadiation(aiant,f0)
+% Max-Gain Solution
+% This solution achieves the highest directivity at the cost of reduced bandwidth.
+
+aiant.Length = X(idxMaxGain,1);
+aiant.Width = X(idxMaxGain,2);
+aiant.Height = X(idxMaxGain,3);
+peakRadiation(aiant,f0)
+% Balanced Solution
+% This solution offers a practical compromise, improving both bandwidth and 
+% gain over the initial design while staying on-frequency.
+
+aiant.Length = X(idxBal,1);
+aiant.Width = X(idxBal,2);
+aiant.Height = X(idxBal,3);
+peakRadiation(aiant,f0)
+%% Full-Wave Validation
+% Before committing to fabrication, validate the chosen design with full-wave 
+% EM simulation. This is the recommended workflow: use AI for rapid design-space 
+% exploration, then confirm the finalist with rigorous simulation.
+
+validateChoice = "Balanced";
+switch validateChoice
+    case "Max BW"
+        idx = idxMaxBW;
+    case "Max Gain"
+        idx = idxMaxGain;
+    case "Balanced"
+        idx = idxBal;
+end
+aiant.Length = X(idx,1);
+aiant.Width = X(idx,2);
+aiant.Height = X(idx,3);
+pm = exportAntenna(aiant);
+freq = linspace(0.7,1.3,1001)*f0;
+% Resonant Frequency
+% |SweepOption="interp"| fits a rational function to the S-parameters from a 
+% sparse set of EM solves, then evaluates at all 1001 frequency points — fine 
+% resolution at minimal additional cost.
+
+tic
+fR_EM = resonantFrequency(pm,freq,SweepOption="interp");
+toc
+% Bandwidth
+% The bandwidth computation reuses the cached EM solutions from the resonant 
+% frequency sweep, so it returns almost instantly.
+
+tic
+bw_EM = bandwidth(pm,freq,SweepOption="interp");
+toc
+% Beamwidth
+% Far-field quantities require evaluating the radiation integral at each observation 
+% angle — a separate computation from the port analysis. Compute beamwidth at 
+% 1-degree resolution in two elevation planes for the patch (az=0 and az=90).
+
+tic
+hpbw_el0_EM = beamwidth(pm,f0,0,0:360);
+toc
+%%
+tic
+hpbw_el90_EM = beamwidth(pm,f0,90,0:360);
+toc
+% Peak Radiation
+% Full-sphere scan at 1-degree resolution (361 azimuth x 181 elevation directions). 
+% This is the most expensive single computation — the cost the AI surrogate helped 
+% avoid 500 times during optimization.
+
+tic
+rad_EM = peakRadiation(pm,f0,0:360,-90:90);
+toc
+%% Compare AI vs. Full-Wave
+% Tabulate the AI surrogate predictions against full-wave EM results. The AI 
+% models are accurate enough to enable the optimizer to reliably explore the design 
+% space, with full-wave simulation providing the final confirmation before fabrication.
+
+fR_AI = resonantFrequency(aiant);
+bw_AI = bandwidth(aiant);
+hpbw_AI = beamwidth(aiant,f0);
+rad_AI = peakRadiation(aiant,f0);
+%%
+table([fR_AI;bw_AI;hpbw_AI(1);hpbw_AI(2);rad_AI], ...
+    [fR_EM(1);bw_EM;hpbw_el0_EM;hpbw_el90_EM;rad_EM], ...
+    VariableNames=["AI","EM"], ...
+    RowNames=["Resonant Frequency","10-dB Bandwidth", ...
+    "3-dB Beamwidth (Plane 1)","3-dB Beamwidth (Plane 2)","Peak Radiation"])
+%% Helper Function
+% The |multiObjFcnAI| local function evaluates the two competing objectives 
+% for a given set of geometric parameters. It assigns the optimization variables 
+% to the AIAntenna object and returns the negated bandwidth and peak radiation 
+% (negated because |paretosearch| minimizes).
+
+function y = multiObjFcnAI(aiant,f0,optimInput)
+aiant.Length = optimInput(1);
+aiant.Width = optimInput(2);
+aiant.Height = optimInput(3);
+bw = bandwidth(aiant);
+rad = peakRadiation(aiant,f0);
+y = [-bw, -rad];
+end
+%% Constraint Function
+% The |constraintFcnAI| local function enforces that the resonant frequency 
+% stays within ±2% of the operating frequency. This prevents the optimizer from 
+% exploiting geometries that achieve high bandwidth or gain by shifting the resonance 
+% away from the target band.
+
+function [c,ceq] = constraintFcnAI(aiant,f0,optimInput)
+aiant.Length = optimInput(1);
+aiant.Width = optimInput(2);
+aiant.Height = optimInput(3);
+fR = resonantFrequency(aiant);
+c(1) = -fR + f0*0.98;
+c(2) = fR - f0*1.02;
+ceq = [];
+end
+%% 
+% _AP-S/URSI 2026 Technical Workshop — HD-7: AI in Antenna Design and Analysis: 
+% From Pretrained Models to System-Level Integration_
+% 
+% _Copyright 2026 The MathWorks, Inc._
+##### SOURCE END #####
+-->
+</div></body></html>
