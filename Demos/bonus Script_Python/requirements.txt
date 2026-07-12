@@ -1,0 +1,9 @@
+--index-url https://pypi.org/simple
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+numpy==2.4.6
+torch==2.13.0+cpu
+gpytorch==1.15.2
+botorch==0.18.1
+matplotlib==3.11.0
+matlabengine==26.1
