@@ -1,2 +1,10 @@
-# Auto detect text files and perform LF normalization
 * text=auto
+*.m text
+*.md text
+*.py text
+*.csv text
+*.pdf binary
+*.mat binary
+*.fig binary
+*.png binary
+*.pln text

@@ -1,0 +1,7 @@
+Candidate,BoardSide_mm,PatchLength_mm,PatchWidth_mm,Height_mm,BoardArea_mm2,GeometryMaterialsPass,WorstS11_dB,MinRealizedGain_dBi,Matching,RealizedGain,Screening,Validation
+D1,122.364285,55.063921,55.063921,3.059107,14973.0182435612,1,-3.7844245395911,7.19195888344028,Fail,Pass,Fail,Not selected for finer check
+D2,122.364285,55.738173,55.063921,3.059107,14973.0182435612,1,-14.0104772590284,9.35112886765379,Pass,Pass,Pass,Not selected for finer check
+D3,122.364285,56.440519,55.063921,3.059107,14973.0182435612,1,-7.01980632727837,8.59162419687287,Fail,Pass,Fail,Not selected for finer check
+D4,100,55.063921,55.063921,3.059107,10000,1,-3.90233771275071,6.81637885507269,Fail,Pass,Fail,Not selected for finer check
+D5,100,55.738173,55.063921,3.059107,10000,1,-6.94053261029498,8.1318443763085,Fail,Pass,Fail,Not selected for finer check
+D6,100,56.440519,55.063921,3.059107,10000,1,-12.3022772993865,8.89925832824369,Pass,Pass,Pass,Verified on lambda/24

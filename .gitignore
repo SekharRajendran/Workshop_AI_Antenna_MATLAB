@@ -1,0 +1,18 @@
+# Authoring files and local working artifacts
+*.ppt
+*.pptx
+*.potx
+*.ppsx
+*.asv
+*.m~
+*~
+__pycache__/
+*.py[cod]
+.matplotlib/
+.venv/
+.DS_Store
+Thumbs.db
+~$*
+
+# Locally generated fresh runs (the supplied reference results stay tracked)
+Demos/Part1_AgenticAI/Worked_Example/Results/reproduction_*/

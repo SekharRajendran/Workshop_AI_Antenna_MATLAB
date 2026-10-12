@@ -1,0 +1,7 @@
+ID,TestOrder,Spacing_mm,ArrayOutlineSide_mm,FeedSubstrate,Divider,Route,Input50_mm,Interstage50_mm,Output50_mm,Total50PerPath_mm,CoaxPerOutput_mm,Width50_mm,Width70_mm,Quarter70_mm,AntennaOnlyMinGain_dBi,AntennaOnlyMargin_dB,LoadedGain_dBi,Status,Purpose
+F1,1,105,205,LowLossAssumed,Wilkinson,Standard,10,30,60,100,300,1.770651,0.929901,18.7879839084477,14.9702686747383,0.9702686747383,NaN,Planned,Reference
+F2,3,105,205,FR4Assumed,Wilkinson,Standard,10,30,60,100,300,1.531601,0.777351,17.3791408773723,14.9702686747383,0.9702686747383,NaN,Planned,Isolate feed laminate effect versus F1
+F3,4,105,205,LowLossAssumed,Matched tee,Standard,10,30,60,100,300,1.770651,0.929901,18.7879839084477,14.9702686747383,0.9702686747383,NaN,Planned,Isolate divider topology versus F1
+F4,2,105,205,LowLossAssumed,Wilkinson,Short,10,15,35,60,300,1.770651,0.929901,18.7879839084477,14.9702686747383,0.9702686747383,NaN,Planned,Reduce equal-length routing versus F1
+F5,5,112,212,LowLossAssumed,Wilkinson,Short,10,15,35,60,300,1.770651,0.929901,18.7879839084477,15.0753506543078,1.0753506543078,NaN,Planned,Compare spacing against F4
+F6,6,120,220,LowLossAssumed,Wilkinson,Short,10,15,35,60,300,1.770651,0.929901,18.7879839084477,15.081413460695,1.081413460695,NaN,Planned,Compare spacing against F4

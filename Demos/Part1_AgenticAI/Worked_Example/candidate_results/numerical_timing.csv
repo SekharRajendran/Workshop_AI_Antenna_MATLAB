@@ -1,0 +1,50 @@
+Candidate,Operation,Seconds
+D1,lambda/16 broadside realized gain 1,0.2767335
+D1,lambda/16 broadside realized gain 2,0.323546
+D1,lambda/16 broadside realized gain 3,0.1655531
+D1,lambda/16 broadside realized gain 4,0.3009341
+D1,lambda/16 broadside realized gain 5,0.1784783
+D2,lambda/16 mesh,0.2704092
+D2,lambda/16 interpolating sweep,2.9727084
+D2,lambda/16 broadside realized gain 1,0.2694968
+D2,lambda/16 broadside realized gain 2,0.2515391
+D2,lambda/16 broadside realized gain 3,0.1431426
+D2,lambda/16 broadside realized gain 4,0.2569324
+D2,lambda/16 broadside realized gain 5,0.2471728
+D3,lambda/16 mesh,0.1149515
+D3,lambda/16 interpolating sweep,2.7092661
+D3,lambda/16 broadside realized gain 1,0.2601957
+D3,lambda/16 broadside realized gain 2,0.2450384
+D3,lambda/16 broadside realized gain 3,0.1426823
+D3,lambda/16 broadside realized gain 4,0.2499577
+D3,lambda/16 broadside realized gain 5,0.2500555
+D4,lambda/16 mesh,0.0742239
+D4,lambda/16 interpolating sweep,1.9123341
+D4,lambda/16 broadside realized gain 1,0.1976786
+D4,lambda/16 broadside realized gain 2,0.1991038
+D4,lambda/16 broadside realized gain 3,0.1303565
+D4,lambda/16 broadside realized gain 4,0.2003106
+D4,lambda/16 broadside realized gain 5,0.2017754
+D5,lambda/16 mesh,0.1220736
+D5,lambda/16 interpolating sweep,1.9625401
+D5,lambda/16 broadside realized gain 1,0.1984544
+D5,lambda/16 broadside realized gain 2,0.1943942
+D5,lambda/16 broadside realized gain 3,0.1277656
+D5,lambda/16 broadside realized gain 4,0.1915259
+D5,lambda/16 broadside realized gain 5,0.1929279
+D6,lambda/16 mesh,0.0577451
+D6,lambda/16 interpolating sweep,1.5462863
+D6,lambda/16 broadside realized gain 1,0.2027639
+D6,lambda/16 broadside realized gain 2,0.1940439
+D6,lambda/16 broadside realized gain 3,0.1264451
+D6,lambda/16 broadside realized gain 4,0.1952981
+D6,lambda/16 broadside realized gain 5,0.1983704
+D6,lambda/16 direct interpolation checks,0.0072835
+D6,lambda/24 mesh,0.0655158
+D6,lambda/24 interpolating sweep,4.0984366
+D6,lambda/24 broadside realized gain 1,0.505922
+D6,lambda/24 broadside realized gain 2,0.5223494
+D6,lambda/24 broadside realized gain 3,0.2099464
+D6,lambda/24 broadside realized gain 4,0.5207643
+D6,lambda/24 broadside realized gain 5,0.5574403
+D6,lambda/24 direct interpolation checks,0.0020407

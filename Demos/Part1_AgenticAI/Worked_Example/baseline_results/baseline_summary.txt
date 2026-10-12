@@ -1,0 +1,16 @@
+Baseline D1: physical patchMicrostripInsetfed; MATLAB 26.2.0.3386108 (R2026b)
+Board: 122.364285 x 122.364285 mm; patch: 55.063921 x 55.063921 mm; air gap: 3.059107 mm
+Copper conductivity: 59600000 S/m; catalog thickness: 0.035560 mm
+Fixed lambda/16 maximum edge: 7.647767 mm at 2.45 GHz
+SweepOption=interp; 2.20-2.70 GHz context at 5 MHz, demo band at 1 MHz
+Interpolation sweep: 5.132 s; total numerical work: 7.074 s
+Maximum complex-S check error: 2.2247669e-05 (limit 0.01); pass: 1
+Band evaluation: validated interpolation
+S11 at 2.45 GHz (direct): -4.2112 dB
+Worst sampled S11 in 2.44-2.46 GHz: -3.7844 dB; match pass: 0
+Minimum sampled S11: -4.3909 dB at 2.460000 GHz
+Broadside directivity at 2.45 GHz: 9.6603 dBi
+Peak sampled directivity at 2.45 GHz: 9.7276 dBi
+Directivity is not realized gain. Gain qualification and lambda/24 check are pending.
+This is the baseline only; no six-candidate or array study was performed.
+
